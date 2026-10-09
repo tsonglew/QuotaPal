@@ -21,6 +21,7 @@ class TestQuotaApplication : QuotaPalApplication() {
     val usageRequests = AtomicInteger()
     @Volatile var usedPercent = 38
     @Volatile var responseDelayMillis = 0L
+    @Volatile var usageResponseGate: java.util.concurrent.CountDownLatch? = null
     @Volatile var usageStatusCode = 200
     @Volatile var usageRetryAfter: String? = null
     @Volatile var usageTransportFailure: java.io.IOException? = null
@@ -31,6 +32,11 @@ class TestQuotaApplication : QuotaPalApplication() {
             }
             usageRequests.incrementAndGet()
             Thread.sleep(responseDelayMillis)
+            usageResponseGate?.let { gate ->
+                if (!gate.await(7, java.util.concurrent.TimeUnit.SECONDS)) {
+                    throw java.io.IOException("Test response gate was not released within the widget request budget")
+                }
+            }
             usageTransportFailure?.let { throw it }
             Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(usageStatusCode).message("Test response")
                 .apply { usageRetryAfter?.let { header("Retry-After", it) } }

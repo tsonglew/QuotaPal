@@ -150,3 +150,5 @@
 - Vulkan composition 补充回归：外部强停 seed／restore 均通过，真实时区／时钟回退／DST 探针通过（9.6 秒），结束 crash buffer 为空。
 
 - CI 38004158377 终态：29／31／36 成功；35 真实刷新测试查找 TextView 上的描述失败，改为等待完整视图树中唯一刷新语义与实际点击入口，本地 API 35 两项刷新测试（9.088 秒）及完整 18 项普通套件（123.699 秒）通过，保留三组件／单请求／刷新中断言。37 两组在渲染器初始化前失败，实际日志 API level: 3、Vulkan=0、VulkanNativeSwapchain=1；本地同路径 API level: 37、Vulkan=1。下一候选显式开启 Vulkan 以消除该配置冲突，仍须云端完整验证，不认定已修复。X11 备用库名加载成功，不归因缺库。
+
+- CI 38005242748 全部设备终态：29／31／36 成功；35 真实点击已通过入口查找，但固定 2 秒响应窗口未观察到三组件刷新中。测试改为可控 HTTP 响应闸门，6 秒内验证三个组件的刷新中与唯一待处理请求后才释放响应（闸门最多 7 秒，保留生产 8 秒立即请求预算），finally 释放；本地 API 35 完整 18 项普通套件通过（113.127 秒）。37 两组 Vulkan=1 已确认、compositor 初始化已越过，但 SurfaceFlinger 在 libGLESv2_angle 的 FindAndAllocateCompatibleMemory／AllocateBufferMemory 路径反复 SIGABRT，系统准备超时；没有进入 App 测试，不计 E06。

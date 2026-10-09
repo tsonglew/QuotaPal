@@ -33,10 +33,10 @@ class WidgetRefreshActionDeviceTest {
                     is android.view.ViewGroup -> (0 until view.childCount).flatMap { labels(view.getChildAt(it)) }
                     else -> emptyList()
                 }
-                fun awaitBoth(expected: String) {
-                    val deadline = System.currentTimeMillis() + 20_000
+                fun awaitBoth(expected: String, timeoutMillis: Long = 20_000) {
+                    val deadline = android.os.SystemClock.elapsedRealtime() + timeoutMillis
                     var matched = false
-                    while (!matched && System.currentTimeMillis() < deadline) {
+                    while (!matched && android.os.SystemClock.elapsedRealtime() < deadline) {
                         scenario.onActivity { activity ->
                             matched = listOf(activity.widgetView, requireNotNull(activity.secondaryWidgetView), requireNotNull(activity.thirdWidgetView)).all {
                                 labels(it).any { label -> label.text.contains(expected) }
@@ -49,7 +49,8 @@ class WidgetRefreshActionDeviceTest {
                 awaitBoth("62%")
                 val before = app.usageRequests.get()
                 app.usedPercent = 17
-                app.responseDelayMillis = 2_000
+                val responseGate = java.util.concurrent.CountDownLatch(1)
+                app.usageResponseGate = responseGate
                 runBlocking { app.settings.syncResult(null, lastAttemptAt = 0) }
                 // RemoteViews applies asynchronously and semantics may belong to a
                 // wrapper rather than its TextView. Wait for the actual action view.
@@ -85,13 +86,23 @@ class WidgetRefreshActionDeviceTest {
                     if (!clicked) Thread.sleep(50)
                 }
                 org.junit.Assert.assertTrue("Refresh action must become clickable\n$lastTree", clicked)
-                awaitBoth("…")
+                try {
+                    // Observe actual progress before permitting HTTP completion, within
+                    // the production action's eight-second immediate-request budget.
+                    awaitBoth("…", 6_000)
+                    assertEquals("Progress shares one pending request", before + 1, app.usageRequests.get())
+                } finally {
+                    responseGate.countDown()
+                    app.usageResponseGate = null
+                }
                 awaitBoth("83%")
                 assertEquals("Repeated clicks share one request", before + 1, app.usageRequests.get())
                 assertEquals(1, manager.getWorkInfosForUniqueWork("codex-periodic-sync").get(10, TimeUnit.SECONDS)
                     .count { !it.state.isFinished })
             }
         } finally {
+            app.usageResponseGate?.countDown()
+            app.usageResponseGate = null
             app.responseDelayMillis = 0
             runBlocking { app.repository.logout(); app.reconcileSync() }
             instrumentation.uiAutomation.dropShellPermissionIdentity()
