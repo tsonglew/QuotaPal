@@ -19,3 +19,11 @@ alpha12 最新代码在 API 37 software 后端的五项组件渲染均通过；�
 CI 37998260240 全部终态，29／31／35／36（包括真实改时及真实网络探针）成功；37.0／37.2 software 后端仍出现相同 SurfaceFlinger 断言，CI gate 失败，证明单纯切软件后端未解决问题。
 
 根据 Gfxstream 当前源码试验关闭 GlDirectMem 和 HasSharedSlotsHostMemoryAllocator；本地启动检查一度通过，但实际 instrumentation 启动遇到 DeadObjectException。此实验未证明稳定，已撤回，不提交到 CI。保留原始失败证据，Android 17 完整矩阵仍待解决。
+
+## 系统省电恢复探针（E03 部分证据）
+
+新增 `scripts/power_smoke.sh`，仅供受控模拟器运行，沿用拦截全部 HTTP 的合成账号 fixture。API 29 实际进入深度 Doze（IDLE）、开启系统省电（low_power=1）、设置 RUN_ANY_IN_BACKGROUND=ignore，各保留 5 秒并保存 JobScheduler 状态。退出限制后外部强停再启动，逐项断言原 Keystore 连接身份、Room 快照及 fetchedAt、组件绑定／设置／38% 展示保留，唯一周期任务恢复，零额度重新请求。每个模式均有 seed 与 restore 两阶段，共六项。
+
+脚本对 adb 操作设置 90 秒上限，EXIT 恢复 forced-idle、省电、后台 app-op、模拟电池状态；仅允许初始未强制 idle／未省电／后台允许的模拟器，避免覆盖已有实验。它不会宣称五秒观察等价于长期省电验收，也不证明 Doze 内真实后台执行／延迟或 OEM 行为。E03 仍未完成，另需限制期间任务与请求次数的证据。已有 Worker 失败回归覆盖每轮最多三次尝试，但不能拿直接 Worker 调用替代系统后台调度验证。
+
+最终脚本重跑六阶段均成功：0.367／3.010、0.270／3.438、0.297／2.721 秒（分别 seed／restore）。外部复核 deep=ACTIVE、low_power=0、后台 app-op=default，电池恢复 AC 供电且未处于模拟冻结。后台受限 JobScheduler 证据出现 readyNotRestrictedInBg=false 和 WAITING；Doze 记录仍有 readyNotDozing=true，因此不能推断所有任务已受 Doze 阻挡，仍保留 E03 待办。
