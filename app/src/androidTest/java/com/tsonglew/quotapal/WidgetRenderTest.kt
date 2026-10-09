@@ -12,6 +12,7 @@ import android.widget.TextView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
 import com.tsonglew.quotapal.data.UsageParser
+import com.tsonglew.quotapal.data.absoluteTime
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
@@ -88,10 +89,9 @@ class WidgetRenderTest {
                     awaitText("38%")
                     awaitText("已用")
                     // A second provider instance must retain its own theme and percentage preference.
-                    ActivityScenario.launch<WidgetTestHostActivity>(Intent(context, WidgetTestHostActivity::class.java)
-                        .putExtra("width", 140).putExtra("height", 150)).use { standard ->
+                    run {
                         var standardId = 0
-                        standard.onActivity { standardId = it.widgetId }
+                        scenario.onActivity { standardId = it.addStandardWidget() }
                         runBlocking {
                             app.settings.saveWidget(standardId, true, "light"); app.updateWidgets()
                             assertEquals(false to theme, app.settings.widgetSettings(id))
@@ -100,10 +100,11 @@ class WidgetRenderTest {
                         var standardMatched = false
                         while (!standardMatched && System.currentTimeMillis() < deadline) {
                             instrumentation.waitForIdleSync()
-                            standard.onActivity { standardMatched = text(it.widgetView).contains("62%") }
+                            scenario.onActivity { standardMatched = text(requireNotNull(it.secondaryWidgetView)).contains("62%") }
                             if (!standardMatched) Thread.sleep(100)
                         }
                         assertTrue("Both widget providers must receive shared snapshot updates", standardMatched)
+                        scenario.onActivity { it.removeStandardWidget() }
                         runBlocking { app.settings.deleteWidget(standardId) }
                     }
                     awaitText("38%")
@@ -116,7 +117,9 @@ class WidgetRenderTest {
                     )
                     val expected = listOf("当前可用", "未提供周期额度", "未提供周期额度", "暂不可用", "使用受限")
                     states.forEachIndexed { index, (name, body) ->
-                        runBlocking { app.repository.demo(UsageParser.parse(body, "demo", 1000)); app.updateWidgets() }
+                        val fetchedAt = 1000L + index * 60
+                        runBlocking { app.repository.demo(UsageParser.parse(body, "demo", fetchedAt)); app.updateWidgets() }
+                        awaitText(absoluteTime(fetchedAt, true))
                         awaitText(expected[index])
                         scenario.onActivity { assertFalse("Do not show a percentage for $name", text(it.widgetView).contains("%")) }
                         capture("widget-slim-$name-${width}x$height")

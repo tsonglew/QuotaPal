@@ -20,7 +20,11 @@ import com.tsonglew.quotapal.widget.SlimQuotaWidgetReceiver
 class WidgetTestHostActivity : Activity() {
     companion object { private val hostIds = AtomicInteger(501) }
     lateinit var widgetView: AppWidgetHostView
+    var secondaryWidgetView: AppWidgetHostView? = null
+        private set
+    private var secondaryWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
     private lateinit var host: AppWidgetHost
+    private lateinit var root: FrameLayout
     var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
         private set
 
@@ -28,6 +32,19 @@ class WidgetTestHostActivity : Activity() {
         super.onCreate(savedInstanceState)
         val width = intent.getIntExtra("width", 280)
         val height = intent.getIntExtra("height", 150)
+        host = AppWidgetHost(this, hostIds.incrementAndGet())
+        val (id, view) = bindWidget(width, height, intent.getBooleanExtra("slim", false))
+        widgetId = id
+        widgetView = view
+        root = FrameLayout(this).apply {
+            setBackgroundColor(Color.rgb(218, 222, 230))
+            addView(view, widgetLayout(view, width, height, Gravity.CENTER))
+        }
+        setContentView(root)
+        host.startListening()
+    }
+
+    private fun bindWidget(width: Int, height: Int, slim: Boolean): Pair<Int, AppWidgetHostView> {
         val options = Bundle().apply {
             putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, width)
             putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, width)
@@ -37,22 +54,35 @@ class WidgetTestHostActivity : Activity() {
             if (android.os.Build.VERSION.SDK_INT >= 31)
                 putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, arrayListOf(SizeF(width.toFloat(), height.toFloat())))
         }
-        host = AppWidgetHost(this, hostIds.incrementAndGet())
-        widgetId = host.allocateAppWidgetId()
+        val id = host.allocateAppWidgetId()
         val manager = AppWidgetManager.getInstance(this)
-        val provider = if (intent.getBooleanExtra("slim", false)) SlimQuotaWidgetReceiver::class.java else QuotaWidgetReceiver::class.java
-        check(manager.bindAppWidgetIdIfAllowed(widgetId, ComponentName(this, provider), options))
-        val info = manager.getAppWidgetInfo(widgetId)
-        widgetView = host.createView(this, widgetId, info)
+        val provider = if (slim) SlimQuotaWidgetReceiver::class.java else QuotaWidgetReceiver::class.java
+        check(manager.bindAppWidgetIdIfAllowed(id, ComponentName(this, provider), options))
+        return id to host.createView(this, id, manager.getAppWidgetInfo(id))
+    }
+
+    private fun widgetLayout(view: AppWidgetHostView, width: Int, height: Int, gravity: Int): FrameLayout.LayoutParams {
+        val info = view.appWidgetInfo
         val padding = AppWidgetHostView.getDefaultPaddingForWidget(this, info.provider, null)
         val density = resources.displayMetrics.density
-        val root = FrameLayout(this).apply {
-            setBackgroundColor(Color.rgb(218, 222, 230))
-            addView(widgetView, FrameLayout.LayoutParams(ceil(width * density).toInt() + padding.left + padding.right,
-                ceil(height * density).toInt() + padding.top + padding.bottom, Gravity.CENTER))
-        }
-        setContentView(root)
-        host.startListening()
+        return FrameLayout.LayoutParams(ceil(width * density).toInt() + padding.left + padding.right,
+            ceil(height * density).toInt() + padding.top + padding.bottom, gravity)
+    }
+
+    fun addStandardWidget(): Int {
+        check(secondaryWidgetView == null)
+        val (id, view) = bindWidget(140, 150, false)
+        secondaryWidgetId = id
+        secondaryWidgetView = view
+        root.addView(view, widgetLayout(view, 140, 150, Gravity.TOP or Gravity.CENTER_HORIZONTAL))
+        return id
+    }
+
+    fun removeStandardWidget() {
+        secondaryWidgetView?.let(root::removeView)
+        host.deleteAppWidgetId(secondaryWidgetId)
+        secondaryWidgetView = null
+        secondaryWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
     }
 
     override fun onDestroy() {
