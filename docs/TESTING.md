@@ -68,4 +68,6 @@ alpha11 的 Android 17 CI 使用 `scripts/native_device_tests.py` 安装两 APK 
 
 alpha12 新增 `scripts/system_time_smoke.sh`：仅在自建测试模拟器执行真实改时探针，检查时区／夏令时／跨天及回拨刷新，finally 恢复时间与自动设置。两个系统时间广播属于 [Android 隐式广播例外](https://developer.android.com/develop/background-work/background-tasks/broadcasts/broadcast-exceptions)，接收器只重绘缓存；不使用每分钟广播唤醒后台。
 
+`scripts/network_smoke.sh` 显式关闭自建模拟器的 Wi-Fi 与移动数据，要求 OS 从有效互联网变为无网络，再恢复原连接。检查真实 WorkManager 约束与调度：离线不执行请求、成功缓存保留，重连后只请求一次。用量响应由测试 runner 拦截，不把合成凭据发到外部。该探针普通套件默认跳过，CI 在系统时间探针后单独运行。仅“有 activeNetwork”不算恢复，必须满足 NET_CAPABILITY_VALIDATED；本地受代理限制的宿主须先配置其测试网络并在结束后恢复。
+
 TalkBack 专项仅在装有 Google TalkBack 的测试模拟器显式执行：`adb -e shell am instrument -w -e class com.tsonglew.quotapal.TalkBackDeviceTest -e talkbackProbe true com.tsonglew.quotapal.test/com.tsonglew.quotapal.QuotaTestRunner`。会临时启用真实 TalkBack 和 200% 字体，检查标准／紧凑组件的可访问树、焦点、双击和共享请求，并保存 talkback-*-focus／updated 截图；结束恢复原设置。普通套件按条件跳过，不以无 TalkBack 服务的模拟结果代替实际验证。

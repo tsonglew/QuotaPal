@@ -1,12 +1,12 @@
 # QuotaPal
 
-面向 Android 的 Codex 额度监控 App，参考 Nowdex 的额度速览与桌面小组件体验。首版支持单 Codex 账号，先自用验证，再公开发布。
+面向 Android 的 Codex 额度监控 App，参考 Nowdex 的额度速览与桌面小组件体验。QuotaPal 是独立第三方工具，与 OpenAI 无隶属关系。首版支持单 Codex 账号，先自用验证，再公开发布。
 
 ![QuotaPal 浅色与深色界面，以及 2×1、标准和宽版桌面小组件预览](docs/assets/quotapal-preview.png)
 
 基于原生界面截图合成的展示效果图，额度均为示例数据。[查看原生截图](docs/SCREENSHOTS.md)。
 
-当前开发分支版本：`0.1.0-alpha10`（尚未合并）。已加入分品牌后台引导、小组件即时手动刷新与离线隐私说明。alpha06 的 45 项单元测试、lint、构建和 API 29／31／35／36 设备矩阵全部通过；alpha07 四版本 CI 全部通过；alpha08 本地 47 项单元测试通过，并补充刷新进度显示；alpha10 增加后台每轮最多 3 次尝试与故障恢复回归；Android 17 本地 18 项实际测试单轮通过，外部生命周期两阶段独立通过。API 29 最矮大字体及 37.2／16 KB CI 仍待完成。已有小米 Android 17 真机连接成功反馈，真实续期、清理后更新及长期自用仍待验收。
+当前开发分支版本：`0.1.0-alpha12`（尚未合并）。已加入分品牌后台引导、小组件即时手动刷新、离线隐私说明和后台有限重试。alpha11 的 API 29／31／35／36 CI 均通过，旧系统大字体裁切已修复，Android 17 本地 TalkBack 焦点／双击刷新通过。alpha12 修复系统时区／时间变化后的缓存重绘，实际改时、夏令时、跨天和回拨探针及 API 29 完整 18 项实际测试通过；47 项单元测试、lint、构建通过。Android 17／16 KB 云端仍在排查测试前 Broken pipe。已有小米 Android 17 真机连接成功反馈，真实续期、清理后更新及长期自用仍待验收。
 
 - [开发计划](docs/DEVELOPMENT_PLAN.md)
 - [开发与验收 checklist](docs/DEVELOPMENT_CHECKLIST.md)
@@ -25,6 +25,7 @@
 - [alpha02 验证记录](docs/VALIDATION_ALPHA02.md)
 - [首版验证与 APK 校验和](docs/VALIDATION.md)
 - [原生页面和组件截图](docs/SCREENSHOTS.md)
+- [产品简介、发布素材与使用帮助](docs/RELEASE_MATERIALS.md)
 
 Android 10+，Kotlin 2.1.21、Compose、Glance、Room、DataStore 和 WorkManager。固定构建链为 AGP 8.10.1、Gradle 8.11.1、JDK 17，compileSdk／targetSdk 36。
 
