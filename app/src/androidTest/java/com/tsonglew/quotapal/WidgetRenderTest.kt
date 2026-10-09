@@ -110,10 +110,11 @@ class WidgetRenderTest {
                     val states = listOf(
                         "available" to """{"rate_limit":{"allowed":true}}""",
                         "unreported" to """{"plan_type":"pro","rate_limit":null}""",
+                        "review-only" to """{"rate_limit":null,"additional_rate_limits":[{"metered_feature":"review","rate_limit":{"primary_window":{"used_percent":20}}}]}""",
                         "unknown" to """{"rate_limit":{"primary_window":{"limit_window_seconds":18000}}}""",
                         "restricted" to """{"rate_limit":{"allowed":false,"primary_window":{"used_percent":20}}}""",
                     )
-                    val expected = listOf("当前可用", "未提供周期额度", "暂不可用", "使用受限")
+                    val expected = listOf("当前可用", "未提供周期额度", "未提供周期额度", "暂不可用", "使用受限")
                     states.forEachIndexed { index, (name, body) ->
                         runBlocking { app.repository.demo(UsageParser.parse(body, "demo", 1000)); app.updateWidgets() }
                         awaitText(expected[index])

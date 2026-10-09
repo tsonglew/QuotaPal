@@ -98,7 +98,6 @@ open class QuotaWidget : GlanceAppWidget() {
         val snapshot = state.snapshot
         val notice = snapshot?.quotaNotice()
         val window = snapshot?.windows?.firstOrNull { it.id.startsWith("codex:") || it.id.startsWith("demo:") }
-            ?: snapshot?.windows?.firstOrNull()
         val restricted = snapshot?.allowed == false || snapshot?.limitReached == true
         val metered = window?.usedPercent != null && !restricted
         val label = if (metered) when (window?.durationSeconds) {
