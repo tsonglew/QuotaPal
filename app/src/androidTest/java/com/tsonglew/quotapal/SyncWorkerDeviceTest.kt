@@ -68,7 +68,7 @@ class SyncWorkerDeviceTest {
             app.repository.connect(Session("test-access", "test-refresh", "test-account", Long.MAX_VALUE))
             val cached = app.repository.state.value.snapshot
             app.usageStatusCode = 429
-            app.usageRetryAfter = "120"
+            app.usageRetryAfter = "5"
             app.settings.syncResult(null, lastAttemptAt = 0)
             val before = app.usageRequests.get()
             assertEquals(Result.retry(), worker(0).doWork())
@@ -80,7 +80,11 @@ class SyncWorkerDeviceTest {
             assertEquals("Retry-After blocks additional HTTP attempts", before + 1, app.usageRequests.get())
             assertEquals(deadline, app.settings.read().retryAt)
             assertEquals(cached, app.repository.state.value.snapshot)
-            // Expire only the synthetic test deadline, then model a new user attempt.
+            // Wait for the actual deadline; clearing disk state must not bypass the
+            // process-local guard used when persisting a server limit fails.
+            val waitMillis = ((deadline - java.time.Instant.now().epochSecond + 1).coerceAtLeast(0)) * 1000
+            assertTrue("Synthetic limit must have a bounded wait", waitMillis <= 6000)
+            Thread.sleep(waitMillis)
             app.usageStatusCode = 200
             app.usageRetryAfter = null
             app.settings.syncResult(FailureKind.LIMITED, retryAt = 0, lastAttemptAt = 0)

@@ -77,3 +77,5 @@ Android 17 使用官方 SDK 的 `37.0/google_apis` 与 `37.2/google_apis_ps16k` 
 ### Android 17 模拟器运行环境
 
 当前稳定版 emulator 37.2.12 在 API 37.0／37.2 云端可重复出现 SurfaceFlinger 的 ReadColorBufferDma 断言，完整 gate 保持失败。Android 17 专用启动脚本候选固定到官方 37.1.11 Stable（构建 15917651），下载官方 Linux 压缩包后校验 SHA-256，再在独立临时目录运行。系统镜像与完整测试范围保持原样；本地 API 37 ARM64 的 18 项普通套件、强停及改时已通过，云端／16KB 验证仍待新运行。版本依据及失败对照见 [alpha13 验证](VALIDATION_ALPHA13.md)。
+
+Linux 运行环境需 libpulse0；Android 17 job 在启动固定版本前显式安装。初次云端对照在缺少 libpulse.so.0 时提前失败，没有执行设备测试，不能计作通过。
