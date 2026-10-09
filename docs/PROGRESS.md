@@ -142,3 +142,9 @@
 - 2026-10-10：alpha14 CI 38002272484 的构建／交付成功，六版本设备作业已启动，Android 17 本轮正在安装 libpulse0／进入固定模拟器准备。补正 TESTING.md 的六版本矩阵、时间／网络／省电命令及验证范围；仍需核对最终 gate，未据配置或运行中状态勾选 E06。
 
 - 2026-10-10：按干净 ac3b6df 提交再次构建并整理 alpha14 本地开发包，产物工具独立 verify、aapt2 清单与 apksigner v2 验证成功，记录源提交、APK／证书 SHA-256。用于小米后续验收，不当作稳定 Release 或 deployment；当前 CI 35 成功，其余设备作业继续。
+
+- 2026-10-10：alpha14 CI 全部终态，四个既有版本成功，37 两组补依赖后仍复现原断言，撤回无效 37.1.11 固定。verbose 证实 DMA 三项值实际关闭仍无效；测试官方 VulkanNativeSwapchain 路径，实际 GuestVulkanOnly=1，准备检查通过，完整普通套件运行中。
+
+- 2026-10-10：Vulkan composition 本地完整普通套件 18 项实际测试通过（129.937 秒），准备以相同 feature 参数进入云端对照，保留镜像与全部断言；E06 继续未完成。
+
+- Vulkan composition 补充回归：外部强停 seed／restore 均通过，真实时区／时钟回退／DST 探针通过（9.6 秒），结束 crash buffer 为空。

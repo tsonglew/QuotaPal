@@ -85,4 +85,6 @@ TalkBack 专项仅在装有 Google TalkBack 的测试模拟器显式执行：`ad
 
 alpha14 的刷新存储故障及同进程限流保护由 JVM 故障注入覆盖；七项页面／手动刷新／Worker 设备回归通过。Worker 限流夹具使用短 Retry-After 并等待真实截止时间，不再靠清除磁盘截止字段冒充过期。
 
-Android 17 专用 CI 固定官方 emulator 37.1.11 并校验下载 SHA-256，安装 Linux 运行依赖；保留 API 37.0／37.2 系统镜像与完整原生 runner。该运行环境的本地 ARM64 普通套件已有通过证据，云端及 16KB 仍须独立通过。详见 [alpha13 对照](VALIDATION_ALPHA13.md) 与 [alpha14 验证](VALIDATION_ALPHA14.md)。
+Android 17 专用 CI 使用 SDK 稳定模拟器并安装 Linux 运行依赖，保留 API 37.0／37.2 系统镜像与完整原生 runner。固定到官方 37.1.11 的本地 ARM64 对照通过，但云端仍复现原图形断言，已撤回无效降级；云端及 16KB 仍须独立通过。详见 [alpha13 对照](VALIDATION_ALPHA13.md) 与 [alpha14 验证](VALIDATION_ALPHA14.md)。
+
+Android 17 新候选启用官方 Vulkan composition（`-feature VulkanNativeSwapchain -feature GuestUsesAngle`），使用与本地完整 18 项测试通过时相同的参数；verbose 日志保留实际特性值。仅本地 ARM64 已通过，云端 x86_64／16KB 仍待独立验证，不视为 gate 修复完成。

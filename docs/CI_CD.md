@@ -76,6 +76,8 @@ Android 17 使用官方 SDK 的 `37.0/google_apis` 与 `37.2/google_apis_ps16k` 
 
 ### Android 17 模拟器运行环境
 
-当前稳定版 emulator 37.2.12 在 API 37.0／37.2 云端可重复出现 SurfaceFlinger 的 ReadColorBufferDma 断言，完整 gate 保持失败。Android 17 专用启动脚本候选固定到官方 37.1.11 Stable（构建 15917651），下载官方 Linux 压缩包后校验 SHA-256，再在独立临时目录运行。系统镜像与完整测试范围保持原样；本地 API 37 ARM64 的 18 项普通套件、强停及改时已通过，云端／16KB 验证仍待新运行。版本依据及失败对照见 [alpha13 验证](VALIDATION_ALPHA13.md)。
+API 37.0／37.2 云端可重复出现 SurfaceFlinger 的 ReadColorBufferDma 断言，完整 gate 保持失败。曾固定官方 37.1.11 Stable 并校验下载 SHA-256；本地 ARM64 全套通过，但补 libpulse0 后的实际云端运行仍复现相同断言，因此撤回无效降级，继续使用 SDK 稳定模拟器。系统镜像与完整测试范围保持原样。图形路径的新配置须实际验证后才能认定有效，版本依据与失败对照见 [alpha13 验证](VALIDATION_ALPHA13.md) 和 [alpha14 验证](VALIDATION_ALPHA14.md)。
 
-Linux 运行环境需 libpulse0；Android 17 job 在启动固定版本前显式安装。初次云端对照在缺少 libpulse.so.0 时提前失败，没有执行设备测试，不能计作通过。
+Android 17 job 显式安装 Linux 运行依赖 libpulse0；初次固定版本对照在缺少 libpulse.so.0 时提前失败，没有执行设备测试，不计作通过。
+
+Android 17 新候选启用官方 Vulkan composition（`-feature VulkanNativeSwapchain -feature GuestUsesAngle`），使用与本地完整 18 项测试通过时相同的参数；verbose 日志保留实际特性值。仅本地 ARM64 已通过，云端 x86_64／16KB 仍待独立验证，不视为 gate 修复完成。

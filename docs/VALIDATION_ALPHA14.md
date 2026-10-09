@@ -19,3 +19,13 @@
 在干净提交 ac3b6df6455856352fc546203ce844e16375f27a 再次执行 assembleDebug 后，使用现有产物工具打包并独立 verify 成功。本地包 `.tools/delivery-alpha14/quotapal.apk` 的 applicationId=com.tsonglew.quotapal、versionCode=14、versionName=0.1.0-alpha14，aapt2 实际清单一致。APK SHA-256：`eabca36b9c5c6fbfb06e52674cef3039b4ad7c856e36f1f3b21a74fbd8516a31`；metadata.json 与 SHA256SUMS 同目录。
 
 apksigner 实际验证 v2 签名成功；本地 Android Debug 证书 SHA-256 为 `a83328765a27dbb4713f363f5869edbfea78603cf1dc78563d41e6dcafe63290`。这是供自用验收的开发产物，不是固定发布签名或已通过完整云端 gate 的 Release，也不计为 G08 deployment 验收。
+
+## 云端终态与有效图形配置对照
+
+CI 38002272484 全部终态：API 29／31／35／36 成功，37.0／37.2 在补齐 libpulse0 并实际启动 37.1.11 后仍复现相同 SurfaceFlinger／ReadColorBufferDma 断言，安装时系统服务不可用；gate 失败。降级未解决云端问题，已从脚本撤回固定运行环境，保留完整镜像与测试范围。
+
+本地 37.2.12 的 verbose 日志确认 GLDirectMem 开关实际传入了 Gfxstream（GlDirectMem=0），此前“未生效”的解释不成立。继续同时关闭 GLDirectMem／GLDMA／HasSharedSlotsHostMemoryAllocator，三项实际渲染器值均为 0，仍在 App 测试前复现原断言，因此未将该无效配置加入 CI。
+
+依据官方 emulator 发布说明测试 VulkanNativeSwapchain composition，日志确认 VulkanNativeSwapchain=1、GuestVulkanOnly=1，自动启用 GuestAngle；通过框架稳定准备，启动 crash buffer 为空。完整原生普通套件 18 项实际测试全部通过（129.937 秒，另 4 项条件探针跳过），包含真实小组件点击及渲染断言。CI 候选使用相同两个 feature 参数并保留 verbose 实际值日志；本地 ARM64 通过不证明云端 x86_64／16KB，不据此勾选 E06。
+
+- Vulkan composition 补充回归：外部强停 seed／restore 均通过，真实时区／时钟回退／DST 探针通过（9.6 秒），结束 crash buffer 为空。

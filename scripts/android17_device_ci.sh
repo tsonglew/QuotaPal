@@ -30,16 +30,7 @@ for install_attempt in 1 2 3; do
 done
 export PATH="$ANDROID_HOME/platform-tools:$PATH"
 adb version
-# 37.2.12 reproducibly aborts SurfaceFlinger on the API 37 guest. Keep the
-# guest/API and full test scope; pin the official API-37-capable host runtime.
-runtime_root=$(mktemp -d "${RUNNER_TEMP:-/tmp}/quotapal-emulator.XXXXXX")
-runtime_archive="$runtime_root/emulator.zip"
-curl --fail --location --retry 2 --max-time 300 \
-  https://dl.google.com/android/repository/emulator-linux_x64-15917651.zip -o "$runtime_archive"
-printf '%s  %s\n' 95771e0ae431897b2a4bd2d97fa095f29a8b0624a7b216baf529f9306161c266 "$runtime_archive" | sha256sum --check
-unzip -q "$runtime_archive" -d "$runtime_root"
-emulator_binary="$runtime_root/emulator/emulator"
-"$emulator_binary" -version
+emulator_binary="$ANDROID_HOME/emulator/emulator"
 avd_root=$(mktemp -d "${RUNNER_TEMP:-/tmp}/quotapal-avd.XXXXXX")
 export ANDROID_USER_HOME="$avd_root"
 export ANDROID_EMULATOR_HOME="$avd_root"
@@ -52,7 +43,8 @@ test -s "$ANDROID_AVD_HOME/quotapal-ci.ini"
 printf '\ndisk.dataPartition.size=4G\n' >> "$ANDROID_AVD_HOME/quotapal-ci.avd/config.ini"
 "$emulator_binary" -list-avds
 "$emulator_binary" -avd quotapal-ci -no-window -no-audio -no-boot-anim \
-  -no-snapshot -partition-size 4096 -memory 4096 -cores 2 -gpu software > screenshots/emulator-startup.txt 2>&1 &
+  -no-snapshot -partition-size 4096 -memory 4096 -cores 2 -gpu software \
+  -feature VulkanNativeSwapchain -feature GuestUsesAngle -verbose > screenshots/emulator-startup.txt 2>&1 &
 emulator_pid=$!
 sleep 2
 if ! kill -0 "$emulator_pid" 2>/dev/null; then
