@@ -21,6 +21,12 @@
         <activity android:name=".widget.WidgetConfigurationActivity" android:exported="true">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
         </activity>
+        <receiver android:name=".widget.WidgetTimeReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
         <receiver android:name=".widget.QuotaWidgetReceiver" android:exported="false" android:label="Codex 额度">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/quota_widget_info" />

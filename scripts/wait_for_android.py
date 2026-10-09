@@ -5,7 +5,7 @@ import sys
 import time
 
 
-def ready(adb):
+def ready(adb, configure=False):
     def shell(*args):
         result = subprocess.run([adb, '-e', 'shell', *args], capture_output=True, text=True, timeout=10)
         return result.returncode == 0, result.stdout.strip()
@@ -23,8 +23,16 @@ def ready(adb):
     ok, _ = shell('settings', 'get', 'global', 'window_animation_scale')
     if not ok:
         return False
-    ok, _ = shell('input', 'keyevent', '0')
-    return ok
+    ok, _ = shell('input', 'keyevent', '82' if configure else '0')
+    if not ok:
+        return False
+    if configure:
+        for namespace, key, value in [('system', 'screen_off_timeout', '2147483647')] + [
+                ('global', key, '0') for key in ('window_animation_scale', 'transition_animation_scale', 'animator_duration_scale')]:
+            ok, _ = shell('settings', 'put', namespace, key, value)
+            if not ok:
+                return False
+    return True
 
 
 def main():
@@ -33,7 +41,7 @@ def main():
     stable = 0
     while time.monotonic() < deadline:
         try:
-            stable = stable + 1 if ready(adb) else 0
+            stable = stable + 1 if ready(adb, '--configure' in sys.argv[3:]) else 0
         except (subprocess.SubprocessError, OSError):
             stable = 0
         if stable >= 3:

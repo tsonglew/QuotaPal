@@ -37,7 +37,8 @@ open class QuotaWidget : GlanceAppWidget() {
         provideContent {
             val state by app.repository.state.collectAsState()
             val config by preferences.collectAsState(initialPreferences)
-            Content(state, config.first, config.second, context)
+            val timeRevision by app.wallClockRevision.collectAsState()
+            androidx.compose.runtime.key(timeRevision) { Content(state, config.first, config.second, context) }
         }
     }
 

@@ -9,6 +9,8 @@ cleanup() {
   trap - EXIT
   # A dead/offline emulator can leave adb waiting indefinitely even for logcat.
   python3 scripts/bounded_command.py 10 adb -e logcat -d > screenshots/emulator-logcat.txt 2>&1 || true
+  python3 scripts/bounded_command.py 10 adb -e logcat -d -b crash -t 200 > screenshots/emulator-crashes.txt 2>&1 || true
+  cat screenshots/emulator-crashes.txt
   python3 scripts/bounded_command.py 5 adb -e emu kill >/dev/null 2>&1 || true
   if [[ -n "$emulator_pid" ]]; then
     kill "$emulator_pid" 2>/dev/null || true
@@ -22,10 +24,12 @@ cleanup() {
 trap cleanup EXIT
 for install_attempt in 1 2 3; do
   echo "Installing Android emulator packages (attempt $install_attempt/3)"
-  if sdkmanager --install emulator "system-images;android-${DEVICE_API};${DEVICE_TARGET};x86_64"; then break; fi
+  if sdkmanager --install platform-tools emulator "system-images;android-${DEVICE_API};${DEVICE_TARGET};x86_64"; then break; fi
   if [[ "$install_attempt" == 3 ]]; then exit 1; fi
   sleep "$((install_attempt * 2))"
 done
+export PATH="$ANDROID_HOME/platform-tools:$PATH"
+adb version
 avd_root=$(mktemp -d "${RUNNER_TEMP:-/tmp}/quotapal-avd.XXXXXX")
 export ANDROID_USER_HOME="$avd_root"
 export ANDROID_EMULATOR_HOME="$avd_root"
@@ -45,11 +49,6 @@ if ! kill -0 "$emulator_pid" 2>/dev/null; then
   echo 'Emulator process exited before framework readiness' >&2
   exit 1
 fi
-python3 scripts/wait_for_android.py "$ANDROID_HOME/platform-tools/adb" 300
+python3 scripts/wait_for_android.py "$ANDROID_HOME/platform-tools/adb" 300 --configure
 adb -e shell df -h /data | tee screenshots/emulator-data-space.txt
-adb -e shell input keyevent 82
-adb -e shell settings put system screen_off_timeout 2147483647
-for setting in window_animation_scale transition_animation_scale animator_duration_scale; do
-  adb -e shell settings put global "$setting" 0
-done
 DEVICE_NATIVE_TESTS=1 bash scripts/device_ci.sh

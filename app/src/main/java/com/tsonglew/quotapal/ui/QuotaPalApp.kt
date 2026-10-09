@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tsonglew.quotapal.LoginState
 import com.tsonglew.quotapal.MainViewModel
+import com.tsonglew.quotapal.quotaApp
 import com.tsonglew.quotapal.data.*
 import com.tsonglew.quotapal.widget.QuotaWidgetReceiver
 import com.tsonglew.quotapal.widget.SlimQuotaWidgetReceiver
@@ -45,11 +46,12 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun QuotaPalApp(model: MainViewModel) {
+    val timeRevision by LocalContext.current.quotaApp.wallClockRevision.collectAsStateWithLifecycle()
     val state by model.state.collectAsStateWithLifecycle()
     val prefs by model.preferences.collectAsStateWithLifecycle()
     val login by model.login.collectAsStateWithLifecycle()
-    val clock by produceState(Instant.now().epochSecond) {
-        while (true) { delay(30_000); value = Instant.now().epochSecond }
+    val clock by produceState(Instant.now().epochSecond, timeRevision) {
+        while (true) { value = Instant.now().epochSecond; delay(30_000) }
     }
     var tab by rememberSaveable { mutableStateOf("quota") }
     QuotaTheme(prefs.theme) {
@@ -79,7 +81,7 @@ fun QuotaPalApp(model: MainViewModel) {
                 }
                 Spacer(Modifier.height(32.dp))
                 when (tab) {
-                    "quota" -> if (!state.initialized) CircularProgressIndicator() else Dashboard(state, prefs, model, clock)
+                    "quota" -> if (!state.initialized) CircularProgressIndicator() else key(timeRevision) { Dashboard(state, prefs, model, clock) }
                     "widgets" -> WidgetPage(state, prefs)
                     else -> SettingsPage(state, prefs, model)
                 }

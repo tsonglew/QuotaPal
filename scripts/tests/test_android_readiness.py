@@ -41,3 +41,15 @@ class AndroidReadinessTest(unittest.TestCase):
     def test_working_framework_commands_are_ready(self):
         with patch.object(module.subprocess, 'run', side_effect=self.response):
             self.assertTrue(module.ready('adb'))
+
+    def test_configuration_requires_real_unlock_and_settings_commands(self):
+        for broken_tail in (['input', 'keyevent', '82'], ['settings', 'put', 'global', 'animator_duration_scale', '0']):
+            def broken(command, **kwargs):
+                result = self.response(command, **kwargs)
+                if command[-len(broken_tail):] == broken_tail:
+                    result.returncode = 224
+                return result
+            with self.subTest(command=broken_tail), patch.object(module.subprocess, 'run', side_effect=broken):
+                self.assertFalse(module.ready('adb', configure=True))
+        with patch.object(module.subprocess, 'run', side_effect=self.response):
+            self.assertTrue(module.ready('adb', configure=True))
