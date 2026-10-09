@@ -2,7 +2,10 @@ package com.tsonglew.quotapal
 
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.Canvas
+import android.graphics.Rect
+import android.os.Handler
+import android.os.Looper
+import android.view.PixelCopy
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
@@ -11,6 +14,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class WidgetRenderTest {
     @Test fun realWidgetsRenderCompactWideTallAndClearOnLogout() {
@@ -44,15 +49,27 @@ class WidgetRenderTest {
                     }
                     awaitText("示例数据")
                     if (width >= 280 || height >= 230) awaitText("36%")
+                    lateinit var bitmap: Bitmap
+                    val copied = CountDownLatch(1)
+                    var copyResult = -1
                     scenario.onActivity { activity ->
                         val visible = text(activity.widgetView)
                         val view = activity.widgetView
-                        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
-                        view.draw(Canvas(bitmap))
-                        saveDeviceScreenshot(context, "widget-${width}x$height-$theme", bitmap)
                         assertTrue("Missing primary quota: $visible", visible.contains("62%"))
                         if (width >= 280 || height >= 230) assertTrue("Missing secondary quota: $visible", visible.contains("36%"))
+                        val timestamp = texts(view).single { it.text.startsWith("示例数据") }
+                        val visibleTimestamp = Rect()
+                        assertTrue(timestamp.getLocalVisibleRect(visibleTimestamp))
+                        assertEquals("Timestamp must not be clipped at ${width}x$height", timestamp.height, visibleTimestamp.height())
+                        bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+                        val location = IntArray(2)
+                        view.getLocationInWindow(location)
+                        PixelCopy.request(activity.window, Rect(location[0], location[1], location[0] + view.width, location[1] + view.height),
+                            bitmap, { result -> copyResult = result; copied.countDown() }, Handler(Looper.getMainLooper()))
                     }
+                    assertTrue("Native widget capture timed out", copied.await(5, TimeUnit.SECONDS))
+                    assertEquals(PixelCopy.SUCCESS, copyResult)
+                    saveDeviceScreenshot(context, "widget-${width}x$height-$theme", bitmap)
                     runBlocking { app.repository.logout(); app.updateWidgets() }
                     awaitText("连接你的 Codex")
                     runBlocking { app.settings.deleteWidget(id); app.repository.demo() }
@@ -69,5 +86,10 @@ class WidgetRenderTest {
         is TextView -> view.text.toString()
         is ViewGroup -> (0 until view.childCount).joinToString(" ") { text(view.getChildAt(it)) }
         else -> ""
+    }
+    private fun texts(view: View): List<TextView> = when (view) {
+        is TextView -> listOf(view)
+        is ViewGroup -> (0 until view.childCount).flatMap { texts(view.getChildAt(it)) }
+        else -> emptyList()
     }
 }

@@ -48,14 +48,14 @@ class QuotaWidget : GlanceAppWidget() {
         val foreground = ColorProvider(if (dark) Color(0xFFF2F3F5) else Color(0xFF17191D))
         val muted = ColorProvider(if (dark) Color(0xFFA4AAB5) else Color(0xFF747C88))
         val track = ColorProvider(if (dark) Color(0xFF282C33) else Color(0xFFE6E9EF))
-        Column(GlanceModifier.fillMaxSize().appWidgetBackground().background(background).cornerRadius(28.dp).padding(16.dp)
+        Column(GlanceModifier.fillMaxSize().appWidgetBackground().background(background).cornerRadius(28.dp).padding(12.dp)
             .clickable(actionStartActivity<MainActivity>())) {
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Codex", style = TextStyle(color = foreground, fontSize = 15.sp, fontWeight = FontWeight.Medium), modifier = GlanceModifier.defaultWeight())
                 Text("↻", style = TextStyle(color = muted, fontSize = 20.sp), modifier = GlanceModifier.padding(horizontal = 8.dp)
                     .clickable(actionRunCallback<RefreshWidgetAction>()))
             }
-            Spacer(GlanceModifier.height(12.dp))
+            Spacer(GlanceModifier.height(8.dp))
             if (state.snapshot == null) {
                 Text("连接你的 Codex", style = TextStyle(color = foreground, fontSize = 16.sp, fontWeight = FontWeight.Medium))
                 Spacer(GlanceModifier.height(8.dp))
@@ -87,16 +87,16 @@ class QuotaWidget : GlanceAppWidget() {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(window.name, style = TextStyle(color = foreground, fontSize = 11.sp), modifier = GlanceModifier.defaultWeight(), maxLines = 2)
             Text("${window.percentageLabel(remaining)}${if (window.usedPercent != null) "%" else ""}",
-                style = TextStyle(color = foreground, fontSize = 27.sp, fontWeight = FontWeight.Medium))
+                style = TextStyle(color = foreground, fontSize = 25.sp, fontWeight = FontWeight.Medium))
         }
-        Spacer(GlanceModifier.height(5.dp))
+        Spacer(GlanceModifier.height(4.dp))
         Row(GlanceModifier.fillMaxWidth()) {
             // Glance containers support at most ten direct children.
             repeat(4) { group ->
                 Row(GlanceModifier.defaultWeight()) {
                     repeat(7) { offset ->
                         val index = group * 7 + offset
-                        Box(GlanceModifier.defaultWeight().height(12.dp).padding(horizontal = 1.dp)) {
+                        Box(GlanceModifier.defaultWeight().height(10.dp).padding(horizontal = 1.dp)) {
                             Box(GlanceModifier.fillMaxSize().background(
                                 if (window.displayedPercent(remaining)?.let { index < it / 100 * 28 } == true) ColorProvider(Color(0xFF4796EF)) else track)) {}
                         }
@@ -104,7 +104,7 @@ class QuotaWidget : GlanceAppWidget() {
                 }
             }
         }
-        Spacer(GlanceModifier.height(5.dp))
+        Spacer(GlanceModifier.height(4.dp))
         Text("${if (remaining) "剩余" else "已用"} · ${resetLabel(window)}", style = TextStyle(color = muted, fontSize = 9.sp), maxLines = 2)
         }
     }
