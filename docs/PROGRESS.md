@@ -126,3 +126,5 @@
 - 2026-10-10：省电 harness 审计发现 AOSP 默认禁用 deep，补临时启用／恢复并断言 JobScheduler readyNotDozing=false、后台限制 readyNotRestrictedInBg=false。最终网络隔离版本六阶段通过，Wi-Fi／移动数据／省电／app-op 恢复原值，20 项脚本测试与 ShellCheck 通过；接入 API 29 CI，E03 长期延迟／请求数仍待验证。
 
 - 2026-10-10：补齐对外支持范围文档，逐项核对 alpha13 版本、组件 8 秒续办与 Worker 每轮最多三次的实现；README／发布素材链接已接通，明确真实账号／续期／OEM／Android 17 云端／签名及长期观察的证据缺口，F06 完成。当前 CI 29／31／35 成功、37 两组失败、36 仍运行。
+
+- 2026-10-10：alpha13 CI 37999549398 全部终态：29／31／35／36 成功，37.0 安装 Broken pipe、37.2 启动 instrumentation 后系统崩溃并伴数据库目录缺失，两组 crash buffer 均有 SurfaceFlinger ReadColorBufferDma 断言，gate 正确失败。启动边界处理不能修复系统崩溃，E06 保留；准备推送省电探针与 F06 支持说明。
