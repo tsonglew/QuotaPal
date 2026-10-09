@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Keep execution and artifact collection in one shell; preserve the test result.
 set +e
-./gradlew connectedDebugAndroidTest --stacktrace
+if [[ "${DEVICE_NATIVE_TESTS:-0}" == 1 ]]; then
+  ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace && python3 scripts/native_device_tests.py
+else
+  ./gradlew connectedDebugAndroidTest --stacktrace
+fi
 test_result=$?
 if [[ "$test_result" -eq 0 ]]; then
   # Gradle/UTP may remove the test packages when its suite finishes.

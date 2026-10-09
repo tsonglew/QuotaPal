@@ -59,6 +59,12 @@ class WidgetRenderTest {
                             for (label in labels) {
                                 val visible = Rect()
                                 assertTrue("Large font text outside widget: ${label.text}", label.getLocalVisibleRect(visible))
+                                if (label.height != visible.height()) {
+                                    val bitmap = Bitmap.createBitmap(activity.widgetView.width, activity.widgetView.height, Bitmap.Config.ARGB_8888)
+                                    activity.widgetView.draw(android.graphics.Canvas(bitmap))
+                                    saveDeviceScreenshot(context, "large-font-clipped-${width}x$height", bitmap)
+                                    android.util.Log.e("QuotaWidgetLayout", geometry(activity.widgetView))
+                                }
                                 assertEquals("Large font text clipped at ${width}x$height: ${label.text}", label.height, visible.height())
                                 val layout = requireNotNull(label.layout)
                                 assertTrue("Large font text ellipsized at ${width}x$height: ${label.text}; content=${text(activity.widgetView)}",
@@ -427,6 +433,14 @@ class WidgetRenderTest {
         is TextView -> view.text.toString()
         is ViewGroup -> (0 until view.childCount).joinToString(" ") { text(view.getChildAt(it)) }
         else -> ""
+    }
+    private fun geometry(view: View, depth: Int = 0): String = buildString {
+        append(" ".repeat(depth))
+        append("${view.javaClass.simpleName} ${view.width}x${view.height} at ${view.left},${view.top}")
+        append(" padding=${view.paddingLeft},${view.paddingTop},${view.paddingRight},${view.paddingBottom}")
+        if (view is TextView) append(" text=${view.text} fontPx=${view.textSize} minHeight=${view.minHeight}")
+        append('\n')
+        if (view is ViewGroup) for (index in 0 until view.childCount) append(geometry(view.getChildAt(index), depth + 1))
     }
     private fun texts(view: View): List<TextView> = when (view) {
         is TextView -> listOf(view)

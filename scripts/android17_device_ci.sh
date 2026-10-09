@@ -20,7 +20,12 @@ cleanup() {
   exit "$result"
 }
 trap cleanup EXIT
-sdkmanager --install emulator "system-images;android-${DEVICE_API};${DEVICE_TARGET};x86_64"
+for install_attempt in 1 2 3; do
+  echo "Installing Android emulator packages (attempt $install_attempt/3)"
+  if sdkmanager --install emulator "system-images;android-${DEVICE_API};${DEVICE_TARGET};x86_64"; then break; fi
+  if [[ "$install_attempt" == 3 ]]; then exit 1; fi
+  sleep "$((install_attempt * 2))"
+done
 avd_root=$(mktemp -d "${RUNNER_TEMP:-/tmp}/quotapal-avd.XXXXXX")
 export ANDROID_USER_HOME="$avd_root"
 export ANDROID_EMULATOR_HOME="$avd_root"
@@ -47,4 +52,4 @@ adb -e shell settings put system screen_off_timeout 2147483647
 for setting in window_animation_scale transition_animation_scale animator_duration_scale; do
   adb -e shell settings put global "$setting" 0
 done
-bash scripts/device_ci.sh
+DEVICE_NATIVE_TESTS=1 bash scripts/device_ci.sh

@@ -63,3 +63,7 @@ CI 产物 `android-build` 含 debug APK、单元测试与 lint 报告；设备�
 仅在测试模拟器上使用 `LIFECYCLE_RESTART=reboot` 执行实际设备重启，或先装旧版 debug APK、再用 `LIFECYCLE_RESTART=upgrade LIFECYCLE_APK=/absolute/path/new.apk` 验证覆盖升级。升级断言要求版本号实际增加，不接受同版本重装作为版本迁移证明。`LIFECYCLE_OUTPUT_DIR` 可改证据目录。测试结束清除合成账号及测试组件；失败后如需恢复可重跑完整 harness。真实账号和 OEM 验证仍单独执行。
 
 alpha10 增加 Worker 设备回归：合成离线／超时异常、503 与 429，检查原成功快照不变、每轮最多 3 次、Retry-After 阻止额外请求和新尝试恢复。此回归验证传输故障处理与 Worker 返回值，不代替设备实际断网、Doze 或 OEM 后台限制。
+
+alpha11 的 Android 17 CI 使用 `scripts/native_device_tests.py` 安装两 APK 并执行完整 runner，规避已观察到的 ddmlib 安装失败。原始报告保存在 `screenshots/native-instrumentation.txt`；至少 18 项实际通过、开始／结束状态配对及成功完成码是必要条件，Shell 退出 0 不代表测试通过。其他 API 继续使用 Gradle connected 流程。大字体失败时保存实际 View 几何及截图，方便定位旧系统占位布局问题。
+
+TalkBack 专项仅在装有 Google TalkBack 的测试模拟器显式执行：`adb -e shell am instrument -w -e class com.tsonglew.quotapal.TalkBackDeviceTest -e talkbackProbe true com.tsonglew.quotapal.test/com.tsonglew.quotapal.QuotaTestRunner`。会临时启用真实 TalkBack 和 200% 字体，检查标准／紧凑组件的可访问树、焦点、双击和共享请求，并保存 talkback-*-focus／updated 截图；结束恢复原设置。普通套件按条件跳过，不以无 TalkBack 服务的模拟结果代替实际验证。

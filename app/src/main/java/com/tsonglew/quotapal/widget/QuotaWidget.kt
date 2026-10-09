@@ -135,8 +135,7 @@ open class QuotaWidget : GlanceAppWidget() {
                             fontWeight = FontWeight.Medium), maxLines = 1)
                     } else Text(value, style = TextStyle(color = foreground, fontSize = 10.sp),
                         modifier = GlanceModifier.defaultWeight(), maxLines = 1)
-                    Spacer(GlanceModifier.width(4.dp))
-                    RefreshControl(state, muted, 28.dp, 10.sp)
+                    RefreshControl(state, muted, 6.dp, 10.sp)
                 }
                 Spacer(GlanceModifier.defaultWeight())
                 // Keep every compact variant within the 50 dp minimum, including legacy hosts.
@@ -163,7 +162,7 @@ open class QuotaWidget : GlanceAppWidget() {
                 Spacer(GlanceModifier.defaultWeight())
                 Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(timestamp, style = TextStyle(color = muted, fontSize = 8.sp), modifier = GlanceModifier.defaultWeight(), maxLines = 1)
-                    RefreshControl(state, muted, 36.dp)
+                    RefreshControl(state, muted)
                 }
             }
         }
@@ -194,10 +193,11 @@ open class QuotaWidget : GlanceAppWidget() {
     }
 
     @Composable
-    private fun RefreshControl(state: AppState, color: ColorProvider, width: androidx.compose.ui.unit.Dp,
+    private fun RefreshControl(state: AppState, color: ColorProvider, horizontalPadding: androidx.compose.ui.unit.Dp = 8.dp,
         fontSize: androidx.compose.ui.unit.TextUnit = 12.sp) {
         Text(if (state.syncing) "…" else "↻", style = TextStyle(color = color, fontSize = fontSize),
-            modifier = GlanceModifier.width(width).semantics { contentDescription = "刷新额度" }
+            // Fixed text widths use a sizing TextView on legacy hosts, which also inflates row height.
+            modifier = GlanceModifier.padding(horizontal = horizontalPadding).semantics { contentDescription = "刷新额度" }
                 .clickable(if (!state.connected && !state.demo) actionStartActivity<MainActivity>() else actionRunCallback<RefreshWidgetAction>()))
     }
 
