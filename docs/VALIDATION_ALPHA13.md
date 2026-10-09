@@ -45,3 +45,5 @@ CI 37998260240 全部终态，29／31／35／36（包括真实改时及真实网
 进一步查阅 emulator emu-master-dev 的 opengles.cpp 可见旧 feature 到 Gfxstream feature 的显式映射，因此“两套入口直接导致失效”的解释并未获得证明。已安装二进制与所阅分支之间的差异仍未知，以实际对照为准。
 
 37.1.11 最终完整普通套件通过（162.971 秒，18 项实际成功／4 个条件跳过，22 个入口）；强停 seed／restore 通过（0.637／6.499 秒），真实系统时间探针通过（11.824 秒），crash buffer 无 SurfaceFlinger 断言。新 CI 候选为 Android 17 专用 job 下载官方 Linux 构建 15917651，并验证 SHA-256 `95771e0ae431897b2a4bd2d97fa095f29a8b0624a7b216baf529f9306161c266`，独立目录执行，不替换系统 SDK。云端 x86_64／16KB 全套仍待实际运行；不能将本地通过直接勾选 E06。ShellCheck、actionlint、diff 与 20 项交付脚本测试通过。
+
+37.1.11 的真实网络探针首轮在恢复后仅 PARTIAL_CONNECTIVITY，64.682 秒明确失败；主机 Google generate_204 返回 204，临时为受控模拟器使用现有实验室代理后，原全部断言重跑通过（5.677 秒）。代理不是产品代码或 CI 配置；随后将 http_proxy／global_http_proxy_host／global_http_proxy_port 恢复为原 null，Wi-Fi=1、mobile_data=1，crash buffer 仍为空。原生渲染及探针产物移入忽略的工具目录，不将合成测试输出误提交为发布素材。
