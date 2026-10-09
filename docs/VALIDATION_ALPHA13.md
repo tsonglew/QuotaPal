@@ -33,3 +33,5 @@ CI 37998260240 全部终态，29／31／35／36（包括真实改时及真实网
 最终 harness 在整个合成夹具存续期禁用模拟器 Wi-Fi 与移动网络，退出时先停止 App 再恢复原网络传输状态，防止 instrumentation 结束后系统另起的普通进程绕过测试拦截器。它证明系统 Doze／后台限制条件被正确阻挡，但网络也同时被隔离，不能声称单独测出了 Doze 的延迟或限流。CI 为 API 29 增加此探针，其他版本尚待扩展。
 
 网络隔离最终版本六阶段均成功（0.258／3.579、0.309／2.953、0.306／3.327 秒）；外部复核 Wi-Fi=1、mobile_data=1、low_power=0、后台 app-op=default，均恢复原值。ShellCheck、diff 检查、20 项交付脚本测试通过。
+
+单独关闭 GLDirectMem 的本地对照也失败：模拟器 37.2.12 日志确认该 flag 已 disabled，但 API 37.0 ARM64 在任何 App 测试前约 20 秒即发生同一 SurfaceFlinger／RegionSampling 的 ReadColorBufferDma 断言，system_server 不在运行。已保存本地 crash buffer 并关闭该受控模拟器，未将无效参数提交到 CI。此证据表明旧 emulator feature 开关并不能保证当前 Gfxstream 的扩展广播已关闭，不能据当前主仓库源码推断所安装二进制的行为。
