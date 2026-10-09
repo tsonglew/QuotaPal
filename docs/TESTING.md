@@ -8,6 +8,10 @@
 ./gradlew testDebugUnitTest lintDebug assembleDebug
 ./gradlew connectedDebugAndroidTest
 bash scripts/lifecycle_smoke.sh
+# The following probes change system state: owned test emulators only.
+bash scripts/system_time_smoke.sh
+bash scripts/network_smoke.sh
+bash scripts/power_smoke.sh
 ```
 
 - JVM：解析单／多窗口、缺失／非法百分比、重置时间、账号隔离、HTTP 错误、退避、并发请求、续期与退出时的旧响应。
@@ -19,7 +23,7 @@ bash scripts/lifecycle_smoke.sh
 
 组件测试临时通过系统 shell 授予绑定权限，结束时撤销。测试宿主仅包含在 debug 变体中，未导出，不进入 release。实现依据 [Android widget host 文档](https://developer.android.com/develop/ui/views/appwidgets/host) 和 [AOSP appwidget shell 命令](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/cmds/appwidget/src/com/android/commands/appwidget/AppWidget.java)。宿主测试不能替代真实 Launcher、系统选择器和 OEM 验证。
 
-CI 产物 `android-build` 含 debug APK、单元测试与 lint 报告；设备矩阵覆盖 API 29、31、35、36，`android-device-tests-api-<API>` 各含对应设备测试报告和截图，保留 14 天。不上传凭据或真实账号数据。模拟器矩阵不替代 OEM Launcher、真实授权与连续自用。
+CI 产物 `android-build` 含 debug APK、单元测试与 lint 报告；设备矩阵配置 API 29、31、35、36、37.0 与 37.2／16KB；配置覆盖不等于全部通过，最新结果须核对 CI gate。`android-device-tests-api-<API>` 各含对应设备测试报告和截图，保留 14 天。不上传凭据或真实账号数据。模拟器矩阵不替代 OEM Launcher、真实授权与连续自用。
 
 ## 首次自用验收
 
@@ -71,3 +75,14 @@ alpha12 新增 `scripts/system_time_smoke.sh`：仅在自建测试模拟器执�
 `scripts/network_smoke.sh` 显式关闭自建模拟器的 Wi-Fi 与移动数据，要求 OS 从有效互联网变为无网络，再恢复原连接。检查真实 WorkManager 约束与调度：离线不执行请求、成功缓存保留，重连后只请求一次。用量响应由测试 runner 拦截，不把合成凭据发到外部。该探针普通套件默认跳过，CI 在系统时间探针后单独运行。仅“有 activeNetwork”不算恢复，必须满足 NET_CAPABILITY_VALIDATED；本地受代理限制的宿主须先配置其测试网络并在结束后恢复。
 
 TalkBack 专项仅在装有 Google TalkBack 的测试模拟器显式执行：`adb -e shell am instrument -w -e class com.tsonglew.quotapal.TalkBackDeviceTest -e talkbackProbe true com.tsonglew.quotapal.test/com.tsonglew.quotapal.QuotaTestRunner`。会临时启用真实 TalkBack 和 200% 字体，检查标准／紧凑组件的可访问树、焦点、双击和共享请求，并保存 talkback-*-focus／updated 截图；结束恢复原设置。普通套件按条件跳过，不以无 TalkBack 服务的模拟结果代替实际验证。
+
+
+## 省电恢复探针
+
+`scripts/power_smoke.sh` 仅用于受控模拟器；API 29 CI 在网络探针后执行。它在隔离 Wi-Fi／移动网络的合成夹具生命周期内切换深度 Doze、系统省电及 RUN_ANY_IN_BACKGROUND 限制，确认 JobScheduler 的 `readyNotDozing=false`／`readyNotRestrictedInBg=false`，退出限制并替换进程后核对缓存、组件与唯一周期调度恢复。原 forced-idle、deep 开关、屏幕、电池、省电、app-op 和网络状态在结束时恢复。它不证明 Doze 单独引起的延迟，也不替代 48 小时的请求次数和耗电观察。
+
+## 当前验证边界
+
+alpha14 的刷新存储故障及同进程限流保护由 JVM 故障注入覆盖；七项页面／手动刷新／Worker 设备回归通过。Worker 限流夹具使用短 Retry-After 并等待真实截止时间，不再靠清除磁盘截止字段冒充过期。
+
+Android 17 专用 CI 固定官方 emulator 37.1.11 并校验下载 SHA-256，安装 Linux 运行依赖；保留 API 37.0／37.2 系统镜像与完整原生 runner。该运行环境的本地 ARM64 普通套件已有通过证据，云端及 16KB 仍须独立通过。详见 [alpha13 对照](VALIDATION_ALPHA13.md) 与 [alpha14 验证](VALIDATION_ALPHA14.md)。
