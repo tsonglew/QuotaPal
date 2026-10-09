@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.QuotaPal" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:colorAccent">#3185F5</item>
+    </style>
+    <string name="widget_description">在桌面查看 Codex 剩余额度、重置时间与最后更新时间</string>
+</resources>
