@@ -27,3 +27,15 @@
 | 小组件引导 | 退出后的未连接页 |
 | --- | --- |
 | <img src="screenshots/widgets-light.png" width="300" alt="小组件引导" /> | <img src="screenshots/welcome-dark.png" width="300" alt="退出后的欢迎页" /> |
+
+## alpha02 可选额度状态
+
+来自 [已通过的 alpha02 Android 35 测试](https://github.com/tsonglew/QuotaPal/actions/runs/37946436238)。均为合成示例数据；页面图片为对应 Compose 信息区域，组件图片来自实际原生宿主。
+
+| 仅周额度 | 无周期窗口且可用 | 未知用量 |
+| --- | --- | --- |
+| <img src="screenshots/quota-weekly-only.png" width="300" alt="说明未提供短周期额度并保留周额度" /> | <img src="screenshots/quota-no-windows.png" width="300" alt="当前可用说明" /> | <img src="screenshots/quota-unknown-usage.png" width="300" alt="未知用量显示说明而非空进度条" /> |
+
+| 周额度紧凑组件 | 无周期窗口组件 | 受限状态组件 |
+| --- | --- | --- |
+| <img src="screenshots/widget-weekly-only-140x150.png" width="220" alt="周额度提示和完整更新时间" /> | <img src="screenshots/widget-no-windows-140x150.png" width="220" alt="明确显示当前可用" /> | <img src="screenshots/widget-restricted-140x150.png" width="220" alt="明确显示当前使用受限" /> |
