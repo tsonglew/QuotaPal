@@ -8,7 +8,7 @@
 
 | 入口 | 检查／产物 | 部署 |
 | --- | --- | --- |
-| PR、master／codex 分支 push、手动 CI | 交付脚本测试、45 项 JVM 测试、lint、debug APK；API 29／31／35／36 设备矩阵 | PR 或 master 全部通过后登记预览 deployment；codex 分支 push 仅验证 |
+| PR、master／codex 分支 push、手动 CI | 交付脚本测试、47 项 JVM 测试、lint、debug APK；API 29／31／35／36／37.0／37.2 设备矩阵（新增 Android 17 两项待首次 CI） | PR 或 master 全部通过后登记预览 deployment；codex 分支 push 仅验证 |
 | `v<versionName>` tag，或在该 tag 上手动运行 Release | 验证 tag 格式、版本及主分支祖先关系；复用完整 CI；额外构建和 lint minified release，并在四版本模拟器检查真实 release 页面 | 固定密钥签名、校验证书、发布 GitHub Release；记录 `android-release` 环境 |
 
 统一状态为 `Android CI gate`，只有交付工具检查、build 与全部设备矩阵成功才会通过。交付工具检查固定 actionlint 1.7.12、运行 ShellCheck 与 Python 测试。主分支 CI 不因后续 push 取消正在运行的验证；PR 新提交可取消旧验证。发布同 tag 串行执行。
@@ -65,3 +65,5 @@ GitHub 环境与部署行为参见 [官方环境说明](https://docs.github.com/
 版本发布时，设备矩阵在 debug 回归通过后，下载同次构建的 unsigned release，以一次性测试密钥签名，在隔离模拟器检查启动、示例、组件页、设置、隐私说明和退出。脚本拒绝在真机上执行；通过后才进入正式固定签名 job。日志随设备测试产物保存。此测试不替代 OEM、真实账号或正式签名覆盖升级验收。
 
 手动运行 Android CI 时可勾选 `build-release`，在所选分支验证 minified release 和四版本页面流程，不读取正式签名 secrets，也不创建 GitHub Release。用于在合并／打 tag 前排查发布构建问题。
+
+Android 17 使用官方 SDK 的 `37.0/google_apis` 与 `37.2/google_apis_ps16k` 镜像及 4 GB RAM；后者覆盖 16 KB 页面配置。签名脚本显式使用 `zipalign -P 16` 并验证对齐。此处是配置说明，实际结果见对应运行记录。

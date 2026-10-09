@@ -14,13 +14,14 @@ work_dir="$(mktemp -d)"
 trap 'rm -r "$work_dir"' EXIT
 printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$work_dir/release.keystore"
 tools="$ANDROID_HOME/build-tools/35.0.0"
-"$tools/zipalign" -f -p 4 unsigned/app-release-unsigned.apk "$work_dir/aligned.apk"
+"$tools/zipalign" -f -P 16 4 unsigned/app-release-unsigned.apk "$work_dir/aligned.apk"
 mkdir -p artifacts/release
 apk="artifacts/release/QuotaPal-${RELEASE_TAG#v}.apk"
 "$tools/apksigner" sign --ks "$work_dir/release.keystore" --ks-key-alias "$ANDROID_KEY_ALIAS" \
   --ks-pass env:ANDROID_STORE_PASSWORD --key-pass env:ANDROID_KEY_PASSWORD \
   --out "$apk" "$work_dir/aligned.apk"
 "$tools/apksigner" verify --verbose --print-certs "$apk" > "$work_dir/certificate.txt"
+"$tools/zipalign" -c -P 16 4 "$apk"
 python3 - "$apk" "$work_dir/certificate.txt" <<'PY'
 import hashlib, json, os, re, sys
 from pathlib import Path

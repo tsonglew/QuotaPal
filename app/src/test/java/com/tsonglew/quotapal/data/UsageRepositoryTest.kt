@@ -30,6 +30,18 @@ class UsageRepositoryTest {
         assertEquals(1, server.requestCount)
         assertEquals("88", repository.state.value.snapshot!!.windows.single().percentageLabel(true))
     }
+    @Test fun renderingAnInitializedSnapshotDoesNotWaitForSlowRefresh() = runBlocking {
+        dao.record = SnapshotRecord(accountId = "test-account", json = AppJson.encodeToString(demoSnapshot(500).copy(accountId = "test-account")))
+        repository.initialize()
+        server.enqueue(MockResponse().setBody(body).setBodyDelay(2, TimeUnit.SECONDS))
+        val request = async { repository.refresh(true) }
+        try {
+            withContext(Dispatchers.IO) { assertNotNull(server.takeRequest(5, TimeUnit.SECONDS)) }
+            withTimeout(1000) { repository.initialize() }
+            assertTrue(repository.state.value.syncing)
+            assertEquals(500L, repository.state.value.snapshot!!.fetchedAt)
+        } finally { request.cancelAndJoin() }
+    }
     @Test fun cancelledWidgetAttemptCanImmediatelyContinueWithoutReturningOldCacheAsSuccess() = runBlocking {
         dao.record = SnapshotRecord(accountId = "test-account", json = AppJson.encodeToString(demoSnapshot(500).copy(accountId = "test-account")))
         val readingBody = java.util.concurrent.CountDownLatch(1)

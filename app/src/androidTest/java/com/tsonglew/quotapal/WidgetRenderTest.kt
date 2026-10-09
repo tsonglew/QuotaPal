@@ -66,7 +66,7 @@ class WidgetRenderTest {
                         lateinit var bitmap: Bitmap
                         val copied = CountDownLatch(1)
                         var copyResult = -1
-                        scenario.onActivity { activity ->
+                        withLaidOutWidget(scenario) { activity ->
                             val view = activity.widgetView
                             for (label in texts(view).filter { it.text.isNotEmpty() }) {
                                 val visible = Rect()
@@ -180,7 +180,7 @@ class WidgetRenderTest {
                         lateinit var bitmap: Bitmap
                         val copied = CountDownLatch(1)
                         var copyResult = -1
-                        scenario.onActivity { activity ->
+                        withLaidOutWidget(scenario) { activity ->
                             val view = activity.widgetView
                             val labels = texts(view)
                             for (label in labels.filter { it.text.contains(expected) || it.text.startsWith("示例数据") }) {
@@ -250,7 +250,7 @@ class WidgetRenderTest {
                     lateinit var bitmap: Bitmap
                     val copied = CountDownLatch(1)
                     var copyResult = -1
-                    scenario.onActivity { activity ->
+                    withLaidOutWidget(scenario) { activity ->
                         val visible = text(activity.widgetView)
                         val view = activity.widgetView
                         assertTrue("Missing primary quota: $visible", visible.contains("62%"))
@@ -278,6 +278,26 @@ class WidgetRenderTest {
             instrumentation.uiAutomation.dropShellPermissionIdentity()
             shell("appwidget revokebind --package ${context.packageName} --user 0")
         }
+    }
+
+    private fun withLaidOutWidget(scenario: ActivityScenario<WidgetTestHostActivity>, capture: (WidgetTestHostActivity) -> Unit) {
+        val deadline = System.currentTimeMillis() + 10_000
+        var captured = false
+        while (!captured && System.currentTimeMillis() < deadline) {
+            // A new RemoteViews update can replace children between an earlier text check
+            // and this callback. Check geometry and capture in the same UI-thread turn.
+            scenario.onActivity { activity ->
+                val view = activity.widgetView
+                val labels = texts(view).filter { it.text.isNotEmpty() }
+                if (!view.isLayoutRequested && view.width > 0 && view.height > 0 && labels.isNotEmpty() &&
+                    labels.all { it.layout != null && !it.isLayoutRequested && it.width > 0 && it.height > 0 }) {
+                    capture(activity)
+                    captured = true
+                }
+            }
+            if (!captured) Thread.sleep(100)
+        }
+        assertTrue("Widget text must finish layout before visual assertions and PixelCopy", captured)
     }
 
     private fun text(view: View): String = when (view) {

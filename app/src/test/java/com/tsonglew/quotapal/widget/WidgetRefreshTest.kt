@@ -16,7 +16,21 @@ class WidgetRefreshTest {
         val events = mutableListOf<String>()
         refreshFromWidget({ try { delay(20_000); SyncResult.SUCCESS } finally { events += "cancel" } },
             { events += "enqueue" }, { events += "update" })
-        assertEquals(listOf("cancel", "enqueue", "update"), events)
+        assertEquals(listOf("update", "cancel", "enqueue", "update"), events)
+    }
+    @Test fun pendingRequestPublishesProgressAndThenTheCompletedResult() = runTest {
+        val response = CompletableDeferred<Unit>()
+        val events = mutableListOf<String>()
+        refreshFromWidget({
+            events += "start"
+            response.await()
+            events += "complete"
+            SyncResult.SUCCESS
+        }, { fail("Successful refresh must not enqueue a retry") }, {
+            events += if (response.isCompleted) "result" else "progress"
+            response.complete(Unit)
+        })
+        assertEquals(listOf("start", "progress", "complete", "result"), events)
     }
     @Test fun transientFailuresAndServerWaitCanContinueButAuthDoesNotLoop() = runTest {
         for (result in SyncResult.entries) {

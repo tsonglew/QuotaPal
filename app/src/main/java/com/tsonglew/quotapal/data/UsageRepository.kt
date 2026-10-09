@@ -36,6 +36,8 @@ class UsageRepository(
     val state: StateFlow<AppState> = mutableState
 
     suspend fun initialize() = withContext(Dispatchers.IO) {
+        // Rendering the existing snapshot must not wait for an in-flight network request.
+        if (mutableState.value.initialized) return@withContext
         lock.withLock {
             if (mutableState.value.initialized) return@withLock
             val prefs = settings.read()

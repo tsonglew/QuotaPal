@@ -54,3 +54,9 @@
 - 2026-10-10：[alpha06 CI 37981492470](https://github.com/tsonglew/QuotaPal/actions/runs/37981492470) 完成：45 项 JVM、lint、构建、API 29／31／35／36 设备矩阵、交付脚本检查及统一 gate 全部通过。alpha07 新增离线隐私说明，两处入口共用一份打包原文；设置和连接前的查看／关闭已通过 Android 35 测试，截图已检查，F04 完成。公开发布仍等待 M4–M5 的其余验收。
 
 - 2026-10-10：alpha07 的 release lint、R8 构建通过，实际 manifest 无 debuggable 与 debug 测试宿主，禁止备份和明文网络；生产代码无凭据／HTTP 日志。使用一次性密钥在 Android 35 标准模拟器安装真实 minified release，启动、示例、组件页、深色设置、隐私说明与退出全部通过。F03 完成；加入发布 CI 四版本 minified 页面检查和不发布的手动验证选项。正式签名、实际发布与升级仍待验收。详见 [alpha07 验证记录](VALIDATION_ALPHA07.md)。
+
+- 2026-10-10：[alpha07 CI 37982843666](https://github.com/tsonglew/QuotaPal/actions/runs/37982843666) 的交付检查、构建、API 29／31／35／36 设备测试与 gate 全部通过。alpha08 修复网络请求期间共享快照初始化阻塞组件渲染，并在请求未结束时唤醒 Glance 显示刷新状态；47 项 JVM、lint 与 debug 构建通过。标准 AOSP 35 验证两种 App 添加确认、标准入口取消、桌面显示和点击打开 App；系统选择器拖入已进入配置页并验证取消。新增 API 37.0 与 37.2 CI 配置、16 KB 对齐检查，实际运行结果待记录。
+
+- 2026-10-10：Android 17／API 37 本地首次运行确认系统版本及 4 KB 页面，应用安装成功。旧 Espresso 的 InputManager 反射方法已被平台移除，升级 AndroidX Test 依赖；补充 AppFlow 每项开始前清理示例状态，避免中断后残留影响结果。未将首次失败计为应用兼容性通过。
+
+- 2026-10-10：Android 17／API 37 设备验证覆盖 13 个测试：升级框架后首轮 11 项通过，两项因测试残留示例状态失败；增加独立清理后，3 项 AppFlowTest 全部通过（19.396 秒），包括隐私、分品牌后台引导和页面流程。3 项原生组件渲染、存储、唯一任务和手动刷新回调通过。API 37.2／16 KB 及小米实际手动刷新仍待验证。

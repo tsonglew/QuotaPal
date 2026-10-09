@@ -187,6 +187,7 @@ class SlimQuotaWidget : QuotaWidget() {
 class RefreshWidgetAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: androidx.glance.action.ActionParameters) {
         val app = context.quotaApp
+        app.repository.initialize()
         refreshFromWidget(
             refresh = { app.repository.refresh(force = true) },
             enqueue = { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { SyncScheduler.refresh(context).result.get() } },

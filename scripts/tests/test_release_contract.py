@@ -24,7 +24,7 @@ class ReleaseContractTest(unittest.TestCase):
         self.bin = self.root / 'bin'
         self.bin.mkdir()
         self.executable(self.tools / 'zipalign', '''import shutil,sys
-shutil.copyfile(sys.argv[-2],sys.argv[-1])''')
+if '-c' not in sys.argv: shutil.copyfile(sys.argv[-2],sys.argv[-1])''')
         self.executable(self.tools / 'apksigner', '''import shutil,sys
 if sys.argv[1]=='sign': shutil.copyfile(sys.argv[-1],sys.argv[sys.argv.index('--out')+1])
 else: print('Signer #1 certificate SHA-256 digest: '+ 'a'*64)''')

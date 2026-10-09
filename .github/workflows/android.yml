@@ -114,7 +114,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api-level: [29, 31, 35, 36]
+        api-level: [29, 31, 35, 36, '37.0', '37.2']
+        include:
+          - api-level: '37.0'
+            target: google_apis
+            ram-size: 4096M
+          - api-level: '37.2'
+            target: google_apis_ps16k
+            ram-size: 4096M
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -151,6 +158,8 @@ jobs:
         with:
           api-level: ${{ matrix.api-level }}
           arch: x86_64
+          target: ${{ matrix.target || 'default' }}
+          ram-size: ${{ matrix.ram-size || '2048M' }}
           profile: pixel_6
           disable-animations: true
           script: bash scripts/device_ci.sh
