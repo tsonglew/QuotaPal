@@ -73,3 +73,7 @@ Android 17 使用官方 SDK 的 `37.0/google_apis` 与 `37.2/google_apis_ps16k` 
 运行 37986219241 的 API 37.0／37.2 在应用测试开始前分别因 input 服务缺失／Broken pipe 失败；四个既有版本设备测试通过。Android 17 改由 `scripts/android17_device_ci.sh` 启动相同官方镜像，`wait_for_android.py` 要求启动标记、核心服务、包查询、settings 与无操作按键命令连续三轮成功，再运行原有完整测试及可选 minified release 检查。启动／logcat 日志随设备证据上传；失败继续使统一 gate 失败，不跳过检查。新启动流程尚待云端验证。
 
 所有普通工作流 job 检出事件的不可变 `github.sha`，避免设备 job 启动较晚时读到分支新提交；可复用工作流仍支持显式 ref。
+
+### Android 17 模拟器运行环境
+
+当前稳定版 emulator 37.2.12 在 API 37.0／37.2 云端可重复出现 SurfaceFlinger 的 ReadColorBufferDma 断言，完整 gate 保持失败。Android 17 专用启动脚本候选固定到官方 37.1.11 Stable（构建 15917651），下载官方 Linux 压缩包后校验 SHA-256，再在独立临时目录运行。系统镜像与完整测试范围保持原样；本地 API 37 ARM64 的 18 项普通套件、强停及改时已通过，云端／16KB 验证仍待新运行。版本依据及失败对照见 [alpha13 验证](VALIDATION_ALPHA13.md)。
