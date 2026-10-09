@@ -70,6 +70,19 @@ class UsageRepositoryTest {
         assertEquals(SyncResult.DEFERRED, repository.refresh(true))
         assertEquals(0, server.requestCount)
     }
+    @Test fun clockMovedBackwardsDoesNotKeepFutureSnapshotFresh() = runBlocking {
+        settings.value = settings.value.copy(lastAttemptAt = 2000)
+        dao.record = SnapshotRecord(accountId = "test-account", json = AppJson.encodeToString(demoSnapshot(2000).copy(accountId = "test-account")))
+        server.enqueue(MockResponse().setBody(body))
+        assertEquals(SyncResult.SUCCESS, repository.refresh())
+        assertEquals(1, server.requestCount)
+        assertEquals(1000L, repository.state.value.snapshot!!.fetchedAt)
+    }
+    @Test fun clockMovedBackwardsStillHonorsServerRetryDeadline() = runBlocking {
+        settings.value = settings.value.copy(lastAttemptAt = 2000, retryAt = 2200, lastFailure = FailureKind.LIMITED)
+        assertEquals(SyncResult.DEFERRED, repository.refresh(true))
+        assertEquals(0, server.requestCount)
+    }
     @Test fun concurrentExpiredSessionsRenewOnlyOnceAndSaveRotation() = runBlocking {
         vault.session = vault.session!!.copy(expiresAt = 900)
         server.enqueue(MockResponse().setBody(renewed).setBodyDelay(100, TimeUnit.MILLISECONDS))

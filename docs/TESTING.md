@@ -18,7 +18,7 @@
 
 组件测试临时通过系统 shell 授予绑定权限，结束时撤销。测试宿主仅包含在 debug 变体中，未导出，不进入 release。实现依据 [Android widget host 文档](https://developer.android.com/develop/ui/views/appwidgets/host) 和 [AOSP appwidget shell 命令](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/cmds/appwidget/src/com/android/commands/appwidget/AppWidget.java)。宿主测试不能替代真实 Launcher、系统选择器和 OEM 验证。
 
-CI 产物 `android-build` 含 debug APK、单元测试与 lint 报告；`android-device-tests` 含设备测试报告和截图，保留 14 天。不上传凭据或真实账号数据。
+CI 产物 `android-build` 含 debug APK、单元测试与 lint 报告；设备矩阵覆盖 API 29、31、35、36，`android-device-tests-api-<API>` 各含对应设备测试报告和截图，保留 14 天。不上传凭据或真实账号数据。模拟器矩阵不替代 OEM Launcher、真实授权与连续自用。
 
 ## 首次自用验收
 

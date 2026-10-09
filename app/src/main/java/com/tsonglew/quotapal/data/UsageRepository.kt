@@ -78,11 +78,11 @@ class UsageRepository(
             } ?: return@withLock SyncResult.NO_ACCOUNT
             if (prefs.lastFailure == FailureKind.AUTH && !force) return@withLock SyncResult.AUTH_REQUIRED
             if (now() < prefs.retryAt) return@withLock SyncResult.DEFERRED
-            if (now() - prefs.lastAttemptAt < 10) {
+            if (now() - prefs.lastAttemptAt in 0L until 10L) {
                 // A concurrent caller can use the just-completed snapshot instead of retrying a worker later.
                 return@withLock if (prefs.lastFailure == null && mutableState.value.snapshot != null) SyncResult.SUCCESS else SyncResult.DEFERRED
             }
-            if (!force && prefs.lastFailure == null && mutableState.value.snapshot?.let { now() - it.fetchedAt < prefs.refreshMinutes * 60 } == true)
+            if (!force && prefs.lastFailure == null && mutableState.value.snapshot?.let { now() - it.fetchedAt in 0L until prefs.refreshMinutes * 60 } == true)
                 return@withLock SyncResult.DEFERRED
             mutableState.update { it.copy(syncing = true) }
             settings.syncResult(prefs.lastFailure, prefs.retryAt, now())
