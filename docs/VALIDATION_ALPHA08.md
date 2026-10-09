@@ -32,3 +32,15 @@ Android 17 上新增真实 AppWidgetHost 回归通过（9.883 秒）：280×150 
 [37986219241](https://github.com/tsonglew/QuotaPal/actions/runs/37986219241) 的交付、构建及 API 29／31／35／36 设备 job 成功。API 37.0 在 boot_completed=1 后 input/settings 服务不可用；37.2 发送按键时 Broken pipe，均未开始应用测试，统一 gate 失败。保留失败证据。
 
 新增 Android 17 启动脚本：相同官方镜像与 4 GB RAM，等待核心服务注册、包查询、settings 与无操作按键连续三轮成功后执行完整原测试，保存启动及 logcat 日志。14 项交付脚本测试（含这两种实际启动失败回归）、actionlint、ShellCheck 通过；就绪探测在本地 Android 17 成功。云端新启动流程及 16 KB 仍待运行。所有普通 CI job 改为检出事件 SHA，避免分支移动使不同 job 测试不同提交。
+
+## Pixel Launcher 系统选择器
+
+Android 17／API 37 Google APIs 模拟器、Pixel 6 配置、Pixel Launcher（com.google.android.apps.nexuslauncher）：搜索 QuotaPal，标准入口标为 2×2，紧凑入口标为 2×1；两者通过 Add → 独立配置 → 保存，真实桌面均出现。紧凑实例向右扩大为四列，额度与绝对更新时间完整；长按 Remove 删除，显示 Item removed；再次添加取消后桌面无实例；再次添加选择深色保存后为深色，与标准系统浅色实例并存。dumpsys 确认真实 Launcher 绑定两个 provider。原生截图已目视检查，保存在本机 .tools/alpha08-pixel17（picker-added、resized、readded-dark、both-providers）。
+
+结合此前 AOSP 35 的 App 添加入口、取消和桌面打开，以及真实宿主缩放／删除／配置清理回归，D01／D03 完成。本轮使用示例数据；不代表小米或 Samsung、真实账号后台稳定性通过。
+
+## 大字体待修复
+
+Pixel Launcher 两种原生实例在 130% 字体下，额度与时间节点均可见；200% 时目视发现标准 2×2 底部成功时间被裁掉，紧凑 2×1 时间及刷新符号出现省略。原生截图 font-1.3／font-2.0 保存在上述目录；已恢复模拟器 font_scale=1.0。这是实际布局缺陷，D09 保留未完成，需要大字体下优先保留额度、完整时间与刷新入口并增加回归。
+
+对模拟器进程使用 SIGKILL 确认原 PID 消失，重开后示例模式恢复；示例本身重新生成时间，不是持久真实成功快照，不能据此完成 D08。
