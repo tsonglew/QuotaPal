@@ -20,6 +20,82 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class WidgetRenderTest {
+    @Test fun largeFontKeepsQuotaTimestampAndRefreshVisible() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val app = context.quotaApp
+        fun shell(command: String): String = instrumentation.uiAutomation.executeShellCommand(command).use { descriptor ->
+            java.io.FileInputStream(descriptor.fileDescriptor).bufferedReader().use { it.readText().trim() }
+        }
+        val originalScale = shell("settings get system font_scale").toFloatOrNull() ?: 1f
+        instrumentation.uiAutomation.adoptShellPermissionIdentity(android.Manifest.permission.BIND_APPWIDGET)
+        try {
+            shell("settings put system font_scale 2.0")
+            val deadline = System.currentTimeMillis() + 10_000
+            while (context.resources.configuration.fontScale < 1.9f && System.currentTimeMillis() < deadline) Thread.sleep(100)
+            assertTrue("The platform must apply the large font setting", context.resources.configuration.fontScale >= 1.9f)
+            val snapshot = com.tsonglew.quotapal.data.demoSnapshot(1000)
+            runBlocking { app.repository.demo(snapshot) }
+            for ((width, height) in listOf(130 to 50, 130 to 70, 280 to 70, 140 to 150, 280 to 150, 140 to 230)) {
+                ActivityScenario.launch<WidgetTestHostActivity>(Intent(context, WidgetTestHostActivity::class.java)
+                    .putExtra("width", width).putExtra("height", height).putExtra("slim", height < 100)).use { scenario ->
+                    runBlocking { app.updateWidgets() }
+                    fun verify(expected: String, expectedTime: String) {
+                        val until = System.currentTimeMillis() + 20_000
+                        var matched = false
+                        while (!matched && System.currentTimeMillis() < until) {
+                            scenario.onActivity {
+                                val actual = texts(it.widgetView).map { label -> label.text.toString() }
+                                matched = expected in actual && expectedTime in actual
+                            }
+                            if (!matched) Thread.sleep(100)
+                        }
+                        assertTrue("Large font content missing at ${width}x$height", matched)
+                        withLaidOutWidget(scenario) { activity ->
+                            val labels = texts(activity.widgetView).filter { it.text.isNotEmpty() }
+                            assertTrue("Expected quota must still be rendered", labels.any { it.text.toString() == expected })
+                            assertTrue("Expected timestamp must still be rendered", labels.any { it.text.toString() == expectedTime })
+                            assertTrue("Refresh glyph must remain visible", labels.any { it.text.toString() == "↻" })
+                            for (label in labels) {
+                                val visible = Rect()
+                                assertTrue("Large font text outside widget: ${label.text}", label.getLocalVisibleRect(visible))
+                                assertEquals("Large font text clipped at ${width}x$height: ${label.text}", label.height, visible.height())
+                                val layout = requireNotNull(label.layout)
+                                assertTrue("Large font text ellipsized at ${width}x$height: ${label.text}; content=${text(activity.widgetView)}",
+                                    (0 until layout.lineCount).all { layout.getEllipsisCount(it) == 0 })
+                            }
+                        }
+                    }
+                    verify("62%", absoluteTime(snapshot.fetchedAt, true))
+                    if (width >= 280 && height >= 100 || height >= 230) scenario.onActivity {
+                        assertTrue("Wide or tall large-font widget keeps the second quota", text(it.widgetView).contains("36%"))
+                    }
+                    if ((width == 130 && height == 70) || (width == 140 && height == 150)) {
+                        val fixtures = listOf(
+                            """{"rate_limit":{"primary_window":{"used_percent":0,"limit_window_seconds":604800}}}""" to "100%",
+                            """{"rate_limit":{"primary_window":{"used_percent":100,"limit_window_seconds":604800}}}""" to "0%",
+                            """{"rate_limit":{"primary_window":{"limit_window_seconds":18000}}}""" to "暂不可用",
+                            """{"rate_limit":{"allowed":true}}""" to "当前可用",
+                            """{"plan_type":"pro","rate_limit":null}""" to if (height < 100) "无周期" else "未提供周期额度",
+                            """{"rate_limit":{"allowed":false,"primary_window":{"used_percent":20}}}""" to "受限",
+                        )
+                        for ((body, expected) in fixtures) {
+                            runBlocking { app.repository.demo(UsageParser.parse(body, "demo", 1000)); app.updateWidgets() }
+                            verify(expected, absoluteTime(1000, true))
+                        }
+                        runBlocking { app.repository.logout(); app.updateWidgets() }
+                        verify("未连接", "轻点连接")
+                        runBlocking { app.repository.demo(snapshot) }
+                    }
+                }
+            }
+        } finally {
+            shell("settings put system font_scale $originalScale")
+            runBlocking { app.repository.logout(); app.reconcileSync() }
+            instrumentation.uiAutomation.dropShellPermissionIdentity()
+        }
+    }
+
     @Test fun resizeDeleteAndReaddUseRealHostAndClearInstancePreferences() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext

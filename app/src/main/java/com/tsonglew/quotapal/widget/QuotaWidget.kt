@@ -50,6 +50,10 @@ open class QuotaWidget : GlanceAppWidget() {
         val foreground = ColorProvider(if (dark) Color(0xFFF2F3F5) else Color(0xFF17191D))
         val muted = ColorProvider(if (dark) Color(0xFFA4AAB5) else Color(0xFF747C88))
         val track = ColorProvider(if (dark) Color(0xFF282C33) else Color(0xFFE6E9EF))
+        if (context.resources.configuration.fontScale > 1.3f) {
+            LargeFontContent(state, remaining, background, foreground, muted, track)
+            return
+        }
         if (size.height < 100.dp) {
             CompactContent(state, remaining, background, foreground, muted, track)
             return
@@ -92,6 +96,109 @@ open class QuotaWidget : GlanceAppWidget() {
                     style = TextStyle(color = muted, fontSize = 10.sp), maxLines = 2)
             }
         }
+    }
+
+    @Composable
+    private fun LargeFontContent(state: AppState, remaining: Boolean, background: ColorProvider,
+        foreground: ColorProvider, muted: ColorProvider, track: ColorProvider) {
+        val size = LocalSize.current
+        val compact = size.height < 100.dp
+        val short = size.height < 70.dp
+        val snapshot = state.snapshot
+        val notice = snapshot?.quotaNotice()
+        val restricted = snapshot?.allowed == false || snapshot?.limitReached == true
+        val windows = snapshot?.windows.orEmpty().let { entries ->
+            if (compact) entries.filter { it.id.startsWith("codex:") || it.id.startsWith("demo:") } else entries
+        }.take(if (!compact && (size.width >= 280.dp || size.height >= 230.dp)) 2 else 1)
+        val timestamp = snapshot?.let { absoluteTime(it.fetchedAt, true) } ?: "轻点连接"
+        val summary = listOfNotNull("Codex", if (state.demo) "示例数据" else null,
+            if (remaining) "剩余额度" else "已用额度", if (snapshot == null) "未连接，轻点连接账号" else null, notice?.title,
+            windows.joinToString { "${it.name} ${it.percentageLabel(remaining)}${if (it.usedPercent != null) "%" else ""}，${resetLabel(it)}" },
+            snapshot?.let { "最后成功更新于 $timestamp" }, state.failure?.userMessage()).joinToString("，")
+        Column(GlanceModifier.fillMaxSize().appWidgetBackground().background(background).cornerRadius(20.dp)
+            .padding(horizontal = 6.dp, vertical = if (compact) (if (short) 2.dp else 4.dp) else 6.dp)
+            .semantics { contentDescription = summary }.clickable(actionStartActivity<MainActivity>())) {
+            if (compact) {
+                val window = windows.firstOrNull()
+                val metered = window?.usedPercent != null && !restricted
+                val value = when {
+                    snapshot == null -> "未连接"
+                    restricted -> "受限"
+                    window != null -> window.percentageLabel(remaining) + if (metered) "%" else ""
+                    notice?.title == "当前可用" -> "当前可用"
+                    else -> "无周期"
+                }
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    if (metered) {
+                        Text(when { state.failure != null -> "旧"; state.demo -> "示例"; remaining -> "剩余"; else -> "已用" },
+                            style = TextStyle(color = muted, fontSize = 8.sp), modifier = GlanceModifier.defaultWeight(), maxLines = 1)
+                        Text(value, style = TextStyle(color = foreground, fontSize = if (short) 10.sp else if (value.length > 3) 10.sp else 16.sp,
+                            fontWeight = FontWeight.Medium), maxLines = 1)
+                    } else Text(value, style = TextStyle(color = foreground, fontSize = 10.sp),
+                        modifier = GlanceModifier.defaultWeight(), maxLines = 1)
+                    Spacer(GlanceModifier.width(4.dp))
+                    RefreshControl(state, muted, 28.dp, if (short) 10.sp else 12.sp)
+                }
+                Spacer(GlanceModifier.defaultWeight())
+                Text(timestamp, style = TextStyle(color = muted, fontSize = if (short) 6.sp else 8.sp), maxLines = 1)
+            } else {
+                if (windows.isEmpty()) {
+                    Column {
+                        Text(if (state.demo) "示例额度" else "Codex", style = TextStyle(color = muted, fontSize = 10.sp))
+                        Text(if (snapshot == null) "未连接" else notice?.title ?: "无周期",
+                            style = TextStyle(color = foreground, fontSize = 12.sp), maxLines = 2)
+                    }
+                } else if (size.width < 280.dp && windows.size > 1) {
+                    windows.forEach { LargeWindow(it, state, remaining, foreground, muted, track, dense = true) }
+                } else {
+                    Row(GlanceModifier.fillMaxWidth()) {
+                        windows.forEachIndexed { index, window ->
+                            if (index > 0) Spacer(GlanceModifier.width(12.dp))
+                            Column(GlanceModifier.defaultWeight()) {
+                                LargeWindow(window, state, remaining, foreground, muted, track, dense = false)
+                            }
+                        }
+                    }
+                }
+                Spacer(GlanceModifier.defaultWeight())
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(timestamp, style = TextStyle(color = muted, fontSize = 8.sp), modifier = GlanceModifier.defaultWeight(), maxLines = 1)
+                    RefreshControl(state, muted, 36.dp)
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun LargeWindow(window: QuotaWindow, state: AppState, remaining: Boolean, foreground: ColorProvider,
+        muted: ColorProvider, track: ColorProvider, dense: Boolean) {
+        val restricted = state.snapshot?.allowed == false || state.snapshot?.limitReached == true
+        Column {
+            Row(GlanceModifier.fillMaxWidth()) {
+                Text(window.name, style = TextStyle(color = muted, fontSize = 10.sp),
+                    modifier = GlanceModifier.defaultWeight(), maxLines = 1)
+                if (state.demo || state.failure != null) Text(if (state.demo) "示例" else "旧",
+                    style = TextStyle(color = muted, fontSize = 7.sp), maxLines = 1)
+            }
+            Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(if (remaining) "剩余" else "已用", style = TextStyle(color = muted, fontSize = 8.sp))
+                Spacer(GlanceModifier.width(4.dp))
+                Text(if (restricted) "受限" else window.percentageLabel(remaining) + if (window.usedPercent != null) "%" else "",
+                    style = TextStyle(color = foreground,
+                        fontSize = if (window.usedPercent != null && !restricted) (if (dense) 18.sp else 20.sp) else 10.sp),
+                    modifier = GlanceModifier.defaultWeight(), maxLines = 1)
+            }
+            if (window.usedPercent != null && !restricted) Segments(window, remaining, track, 3.dp)
+            Text(resetLabel(window), style = TextStyle(color = muted, fontSize = 7.sp), maxLines = 1)
+        }
+    }
+
+    @Composable
+    private fun RefreshControl(state: AppState, color: ColorProvider, width: androidx.compose.ui.unit.Dp,
+        fontSize: androidx.compose.ui.unit.TextUnit = 12.sp) {
+        Text(if (state.syncing) "…" else "↻", style = TextStyle(color = color, fontSize = fontSize),
+            modifier = GlanceModifier.width(width).semantics { contentDescription = "刷新额度" }
+                .clickable(if (!state.connected && !state.demo) actionStartActivity<MainActivity>() else actionRunCallback<RefreshWidgetAction>()))
     }
 
     @Composable
