@@ -23,6 +23,37 @@ class UsageRepositoryTest {
         repository = UsageRepository(CodexApi(authBase = server.url("/").toString().trimEnd('/'), usageUrl = server.url("/usage").toString(), now = { 1000 }), vault, dao, settings, now = { 1000 })
     }
     @After fun stop() { server.shutdown() }
+    @Test fun unreadableDatabaseShowsStorageFailureKeepsSessionAndCanRecover() = runBlocking {
+        val session = vault.session
+        dao.readFailure = IllegalStateException("Database directory unavailable")
+        repository.initialize()
+        assertTrue(repository.state.value.initialized)
+        assertTrue(repository.state.value.connected)
+        assertEquals(FailureKind.STORAGE, repository.state.value.failure)
+        assertSame(session, vault.session)
+        assertEquals(0, server.requestCount)
+        dao.readFailure = null
+        server.enqueue(MockResponse().setBody(body))
+        assertEquals(SyncResult.SUCCESS, repository.refresh(true))
+        assertNull(repository.state.value.failure)
+        assertNotNull(repository.state.value.snapshot)
+    }
+    @Test fun unreadablePreferencesDoNotCrashStartupOrDeleteCredentials() = runBlocking {
+        val session = vault.session
+        settings.readFailure = java.io.IOException("Preferences unavailable")
+        repository.initialize()
+        assertTrue(repository.state.value.initialized)
+        assertEquals(FailureKind.STORAGE, repository.state.value.failure)
+        assertSame(session, vault.session)
+        assertEquals(0, server.requestCount)
+    }
+    @Test fun cancelledInitializationIsNotReportedAsStorageFailure() = runBlocking {
+        dao.readFailure = CancellationException("Cancelled initialization")
+        val failure = runCatching { repository.initialize() }.exceptionOrNull()
+        assertTrue(failure is CancellationException)
+        assertFalse(repository.state.value.initialized)
+        assertNull(repository.state.value.failure)
+    }
     @Test fun concurrentRefreshesShareOneRequest() = runBlocking {
         server.enqueue(MockResponse().setBody(body).setBodyDelay(100, TimeUnit.MILLISECONDS))
         val outcomes = coroutineScope { listOf(async { repository.refresh(true) }, async { repository.refresh(true) }).awaitAll() }
@@ -154,13 +185,15 @@ class UsageRepositoryTest {
     }
     private class FakeDao : SnapshotDao {
         var record: SnapshotRecord? = null
-        override suspend fun read() = record
+        var readFailure: Exception? = null
+        override suspend fun read(): SnapshotRecord? { readFailure?.let { throw it }; return record }
         override suspend fun write(record: SnapshotRecord) { this.record = record }
         override suspend fun clear() { record = null }
     }
     private class FakeSettings : SyncSettings {
         var value = PreferencesState()
-        override suspend fun read() = value
+        var readFailure: Exception? = null
+        override suspend fun read(): PreferencesState { readFailure?.let { throw it }; return value }
         override suspend fun demo(value: Boolean) { this.value = this.value.copy(demo = value) }
         override suspend fun syncResult(kind: FailureKind?, retryAt: Long, lastAttemptAt: Long?) {
             value = value.copy(lastFailure = kind, retryAt = retryAt, lastAttemptAt = lastAttemptAt ?: value.lastAttemptAt)

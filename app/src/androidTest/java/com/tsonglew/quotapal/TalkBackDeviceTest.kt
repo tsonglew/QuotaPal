@@ -33,6 +33,9 @@ class TalkBackDeviceTest {
         val previousServices = shell("settings get secure enabled_accessibility_services")
         val previousEnabled = shell("settings get secure accessibility_enabled")
         val previousScale = shell("settings get system font_scale")
+        val talkBackPackage = "com.google.android.marvin.talkback"
+        val notificationsGranted = context.packageManager.checkPermission(Manifest.permission.POST_NOTIFICATIONS,
+            talkBackPackage) == android.content.pm.PackageManager.PERMISSION_GRANTED
         val accessibility = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
         fun await(message: String, condition: () -> Boolean) {
             val deadline = SystemClock.uptimeMillis() + 20_000
@@ -40,6 +43,12 @@ class TalkBackDeviceTest {
                 if (condition()) return
                 Thread.sleep(100)
             }
+            automation.takeScreenshot()?.let { saveDeviceScreenshot(context, "talkback-failure", it) }
+            fun describe(node: AccessibilityNodeInfo): String = buildString {
+                append("${node.className}: text=${node.text}; description=${node.contentDescription}\n")
+                for (index in 0 until node.childCount) node.getChild(index)?.let { append(describe(it)) }
+            }
+            android.util.Log.e("QuotaTalkBack", automation.rootInActiveWindow?.let(::describe) ?: "No active accessibility root")
             fail(message)
         }
         fun descendants(node: AccessibilityNodeInfo): List<AccessibilityNodeInfo> =
@@ -57,6 +66,8 @@ class TalkBackDeviceTest {
         }
         automation.adoptShellPermissionIdentity(Manifest.permission.BIND_APPWIDGET)
         try {
+            if (android.os.Build.VERSION.SDK_INT >= 33 && !notificationsGranted)
+                shell("pm grant $talkBackPackage android.permission.POST_NOTIFICATIONS")
             shell("settings put system font_scale 2.0")
             shell("settings put secure enabled_accessibility_services com.google.android.marvin.talkback/com.google.android.marvin.talkback.TalkBackService")
             shell("settings put secure accessibility_enabled 1")
@@ -117,6 +128,8 @@ class TalkBackDeviceTest {
                 shell(if (value == "null") "settings delete secure $key" else "settings put secure $key $value")
             }
             shell(if (previousScale == "null") "settings delete system font_scale" else "settings put system font_scale $previousScale")
+            if (android.os.Build.VERSION.SDK_INT >= 33 && !notificationsGranted)
+                shell("pm revoke $talkBackPackage android.permission.POST_NOTIFICATIONS")
             runBlocking { app.repository.logout(); app.reconcileSync(); app.updateWidgets() }
             automation.dropShellPermissionIdentity()
         }

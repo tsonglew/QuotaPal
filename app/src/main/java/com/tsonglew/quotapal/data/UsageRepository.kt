@@ -40,18 +40,23 @@ class UsageRepository(
         if (mutableState.value.initialized) return@withContext
         lock.withLock {
             if (mutableState.value.initialized) return@withLock
-            val prefs = settings.read()
-            if (prefs.demo) {
-                mutableState.value = AppState(initialized = true, snapshot = demoSnapshot(now()), demo = true)
-                return@withLock
-            }
+            var session: Session? = null
             try {
-                val session = vault.read()
+                val prefs = settings.read()
+                if (prefs.demo) {
+                    mutableState.value = AppState(initialized = true, snapshot = demoSnapshot(now()), demo = true)
+                    return@withLock
+                }
+                session = vault.read()
                 val snapshot = dao.read()?.takeIf { it.accountId == session?.accountId }?.let {
                     runCatching { AppJson.decodeFromString<UsageSnapshot>(it.json) }.getOrNull()
                 }
                 mutableState.value = AppState(true, session != null, snapshot, failure = prefs.lastFailure)
-            } catch (_: ApiFailure) { mutableState.value = AppState(initialized = true, failure = FailureKind.STORAGE) }
+            } catch (cancel: CancellationException) {
+                throw cancel
+            } catch (_: Exception) {
+                mutableState.value = AppState(initialized = true, connected = session != null, failure = FailureKind.STORAGE)
+            }
         }
     }
 
