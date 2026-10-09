@@ -83,3 +83,7 @@ Android 17 job 显式安装 Linux 运行依赖 libpulse0；初次固定版本对
 Android 17 新候选启用官方 Vulkan composition（`-feature VulkanNativeSwapchain -feature GuestUsesAngle`），使用与本地完整 18 项测试通过时相同的参数；verbose 日志保留实际特性值。仅本地 ARM64 已通过，云端 x86_64／16KB 仍待独立验证，不视为 gate 修复完成。
 
 运行 38004158377 显示云端 API 自动识别为 3 后关闭 Vulkan，composition 已开启但无法初始化；候选增加 `-feature Vulkan`，使实际值与本地通过配置的 Vulkan=1 一致。此配置修正仍待新云端验收。
+
+### AVD 主版本元数据对照
+
+显式 Vulkan 候选 38005242748 的两个 Android 17 job 实际 Vulkan=1，但同一 API level: 3 分支仍关闭 HasSharedSlotsHostMemoryAllocator 与 GlDirectMem，SurfaceFlinger 转为 coherent-memory 分配崩溃。依据 [模拟器 AVD target 解析源码](https://android.googlesource.com/platform/external/qemu/+/refs/heads/emu-master-dev/android/emu/avd/src/android/avd/info.c)，新候选只将 CI 新建 AVD 根 ini 的 target 明确设为整数主版本 android-37，保留 system-images/android-37.0/google_apis 与 android-37.2/google_apis_ps16k 原路径。撤回 Vulkan composition／GuestUsesAngle 及逐项强开配置，使用默认 software 图形路径；记录修改前后根 ini、镜像路径、verbose 特性值。就绪后实际检查 guest SDK=37，16KB job 必须实际 PAGE_SIZE=16384。此为源码与日志支持的待验假设，云端结果才证明是否有效。

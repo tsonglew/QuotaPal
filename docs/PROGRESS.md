@@ -152,3 +152,5 @@
 - CI 38004158377 终态：29／31／36 成功；35 真实刷新测试查找 TextView 上的描述失败，改为等待完整视图树中唯一刷新语义与实际点击入口，本地 API 35 两项刷新测试（9.088 秒）及完整 18 项普通套件（123.699 秒）通过，保留三组件／单请求／刷新中断言。37 两组在渲染器初始化前失败，实际日志 API level: 3、Vulkan=0、VulkanNativeSwapchain=1；本地同路径 API level: 37、Vulkan=1。下一候选显式开启 Vulkan 以消除该配置冲突，仍须云端完整验证，不认定已修复。X11 备用库名加载成功，不归因缺库。
 
 - CI 38005242748 全部设备终态：29／31／36 成功；35 真实点击已通过入口查找，但固定 2 秒响应窗口未观察到三组件刷新中。测试改为可控 HTTP 响应闸门，6 秒内验证三个组件的刷新中与唯一待处理请求后才释放响应（闸门最多 7 秒，保留生产 8 秒立即请求预算），finally 释放；本地 API 35 完整 18 项普通套件通过（113.127 秒）。37 两组 Vulkan=1 已确认、compositor 初始化已越过，但 SurfaceFlinger 在 libGLESv2_angle 的 FindAndAllocateCompatibleMemory／AllocateBufferMemory 路径反复 SIGABRT，系统准备超时；没有进入 App 测试，不计 E06。
+
+- Android 17 新对照只将 AVD 根 target 明确为 android-37，保留原 37.0 ARM64 系统镜像并恢复默认 software 渲染（无 Vulkan composition／GuestUsesAngle 强开）。实际 API level=37、Vulkan=1、GlDirectMem=1、HasSharedSlotsHostMemoryAllocator=1；框架准备通过，guest SDK=37、PAGE_SIZE=4096，完整 18 项普通套件通过（170.281 秒），包含最新可控响应的真实三组件点击刷新测试。准备以相同元数据修正进入云端 x86_64／16KB；新增 guest SDK／页面大小实际检查，E06 仍未完成。
