@@ -112,4 +112,32 @@ class UsageParserTest {
         val session = Session("sensitive-access", "sensitive-refresh", "account", 2000)
         assertFalse(session.toString().contains("sensitive"))
     }
+    @Test fun dateAndTimezoneChangeDoNotChangeResetOrSuccessfulFetchInstants() {
+        val original = TimeZone.getDefault()
+        val fetchedAt = java.time.Instant.parse("2026-10-09T23:30:00Z").epochSecond
+        val snapshot = demoSnapshot(fetchedAt)
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+            assertEquals("10/09 23:30", absoluteTime(snapshot.fetchedAt, true))
+            TimeZone.setDefault(TimeZone.getTimeZone("Asia/Shanghai"))
+            assertEquals("10/10 07:30", absoluteTime(snapshot.fetchedAt, true))
+            assertEquals(fetchedAt, snapshot.fetchedAt)
+            assertEquals("重置待确认 · 请刷新", resetLabel(snapshot.windows.first(), snapshot.windows.first().resetsAt!!))
+            assertEquals("62", snapshot.windows.first().percentageLabel(true))
+        } finally { TimeZone.setDefault(original) }
+    }
+    @Test fun daylightSavingTransitionUsesLocalOffsetForEachInstant() {
+        val original = TimeZone.getDefault()
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("America/New_York"))
+            val before = java.time.Instant.parse("2026-03-08T06:59:00Z").epochSecond
+            val after = before + 60
+            assertEquals("03/08 01:59", absoluteTime(before, true))
+            assertEquals("03/08 03:00", absoluteTime(after, true))
+            val window = QuotaWindow("test", "窗口", 100.0, 3600, after)
+            assertEquals("03/08 03:00 重置", resetLabel(window, before))
+            assertEquals("重置待确认 · 请刷新", resetLabel(window, after))
+            assertEquals("0", window.percentageLabel(true))
+        } finally { TimeZone.setDefault(original) }
+    }
 }

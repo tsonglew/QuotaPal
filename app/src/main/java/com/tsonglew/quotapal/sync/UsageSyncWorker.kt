@@ -18,17 +18,17 @@ class UsageSyncWorker(context: Context, params: WorkerParameters) : CoroutineWor
 object SyncScheduler {
     private const val PERIODIC = "codex-periodic-sync"
     private const val MANUAL = "codex-manual-sync"
-    fun schedule(context: Context, minutes: Long) {
+    fun schedule(context: Context, minutes: Long): Operation {
         val request = PeriodicWorkRequestBuilder<UsageSyncWorker>(minutes, TimeUnit.MINUTES)
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS).build()
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.UPDATE, request)
+        return WorkManager.getInstance(context).enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.UPDATE, request)
     }
-    fun refresh(context: Context) {
+    fun refresh(context: Context): Operation {
         val request = OneTimeWorkRequestBuilder<UsageSyncWorker>().setInputData(workDataOf("force" to true))
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS).build()
-        WorkManager.getInstance(context).enqueueUniqueWork(MANUAL, ExistingWorkPolicy.KEEP, request)
+        return WorkManager.getInstance(context).enqueueUniqueWork(MANUAL, ExistingWorkPolicy.KEEP, request)
     }
     fun cancel(context: Context) {
         WorkManager.getInstance(context).cancelUniqueWork(PERIODIC)
