@@ -69,12 +69,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          script: |
-            set +e
-            ./gradlew connectedDebugAndroidTest --stacktrace
-            test_result=$?
-            adb pull /sdcard/Android/data/com.tsonglew.quotapal/files/screenshots ./screenshots || true
-            exit "$test_result"
+          script: bash scripts/device_ci.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:

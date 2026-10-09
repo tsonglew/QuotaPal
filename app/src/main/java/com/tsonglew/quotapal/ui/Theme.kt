@@ -3,7 +3,11 @@ package com.tsonglew.quotapal.ui
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.graphics.Color
+import androidx.core.view.WindowCompat
+import android.app.Activity
 
 val QuotaBlue = Color(0xFF3989EF)
 val QuotaAmber = Color(0xFFD38A2F)
@@ -11,6 +15,15 @@ val QuotaAmber = Color(0xFFD38A2F)
 @Composable
 fun QuotaTheme(mode: String = "system", content: @Composable () -> Unit) {
     val dark = mode == "dark" || mode == "system" && isSystemInDarkTheme()
+    val view = LocalView.current
+    SideEffect {
+        (view.context as? Activity)?.window?.let { window ->
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = !dark
+                isAppearanceLightNavigationBars = !dark
+            }
+        }
+    }
     val colors = if (dark) darkColorScheme(
         primary = Color(0xFF79B4FF), background = Color(0xFF101113), surface = Color(0xFF1A1C20),
         surfaceVariant = Color(0xFF24272C), onBackground = Color(0xFFF3F4F6), onSurface = Color(0xFFF3F4F6),

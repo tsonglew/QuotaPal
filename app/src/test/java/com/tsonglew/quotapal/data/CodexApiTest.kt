@@ -3,6 +3,7 @@ package com.tsonglew.quotapal.data
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.SocketPolicy
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -51,5 +52,17 @@ class CodexApiTest {
             server.enqueue(MockResponse().setResponseCode(status).setBody("sensitive-account-data"))
             try { api.usage(session); fail() } catch (error: ApiFailure) { assertEquals(kind, error.kind); assertFalse(error.toString().contains("sensitive-account-data")) }
         }
+    }
+    @Test fun disconnectedTransportIsReportedAsNetworkFailure() = runBlocking {
+        server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START))
+        try { api.usage(session); fail() }
+        catch (error: ApiFailure) { assertEquals(FailureKind.NETWORK, error.kind) }
+    }
+    @Test fun redirectCannotForwardCredentialsToAnotherEndpoint() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(302).addHeader("Location", server.url("/unexpected")))
+        try { api.usage(session); fail() }
+        catch (error: ApiFailure) { assertEquals(FailureKind.SERVER, error.kind) }
+        assertEquals(1, server.requestCount)
+        assertEquals("/usage", server.takeRequest().path)
     }
 }

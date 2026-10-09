@@ -50,6 +50,8 @@ class CodexApi(
                         if (source.buffer.size > 512 * 1024) throw ApiFailure(FailureKind.PROTOCOL)
                         val reply = Reply(it.code, source.readUtf8(), it.header("Retry-After"))
                         if (cont.isActive) cont.resume(reply)
+                    } catch (_: IOException) {
+                        if (cont.isActive) cont.resumeWithException(ApiFailure(FailureKind.NETWORK))
                     } catch (_: Exception) {
                         if (cont.isActive) cont.resumeWithException(ApiFailure(FailureKind.PROTOCOL))
                     }

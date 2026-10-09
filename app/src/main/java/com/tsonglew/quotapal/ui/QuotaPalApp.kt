@@ -40,12 +40,16 @@ import com.tsonglew.quotapal.MainViewModel
 import com.tsonglew.quotapal.data.*
 import com.tsonglew.quotapal.widget.QuotaWidgetReceiver
 import java.time.Instant
+import kotlinx.coroutines.delay
 
 @Composable
 fun QuotaPalApp(model: MainViewModel) {
     val state by model.state.collectAsStateWithLifecycle()
     val prefs by model.preferences.collectAsStateWithLifecycle()
     val login by model.login.collectAsStateWithLifecycle()
+    val clock by produceState(Instant.now().epochSecond) {
+        while (true) { delay(30_000); value = Instant.now().epochSecond }
+    }
     var tab by rememberSaveable { mutableStateOf("quota") }
     QuotaTheme(prefs.theme) {
         Scaffold(containerColor = MaterialTheme.colorScheme.background, bottomBar = {
@@ -58,6 +62,7 @@ fun QuotaPalApp(model: MainViewModel) {
                 }
             }
         }) { padding ->
+            key(tab) {
             Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
                 Spacer(Modifier.height(28.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -73,11 +78,12 @@ fun QuotaPalApp(model: MainViewModel) {
                 }
                 Spacer(Modifier.height(32.dp))
                 when (tab) {
-                    "quota" -> if (!state.initialized) CircularProgressIndicator() else Dashboard(state, prefs, model)
+                    "quota" -> if (!state.initialized) CircularProgressIndicator() else Dashboard(state, prefs, model, clock)
                     "widgets" -> WidgetPage(state, prefs)
                     else -> SettingsPage(state, prefs, model)
                 }
                 Spacer(Modifier.height(28.dp))
+            }
             }
         }
         login?.let { LoginDialog(it, model::cancelLogin, model::startLogin) }
@@ -100,7 +106,7 @@ private fun PageTitle(title: String, subtitle: String) {
 }
 
 @Composable
-private fun Dashboard(state: AppState, prefs: PreferencesState, model: MainViewModel) {
+private fun Dashboard(state: AppState, prefs: PreferencesState, model: MainViewModel, now: Long) {
     if (state.snapshot == null) {
         PageTitle("额度，心中有数。", "把 Codex 的剩余额度与重置时间，放到你的 Android 桌面。")
         Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface) {
@@ -147,7 +153,7 @@ private fun Dashboard(state: AppState, prefs: PreferencesState, model: MainViewM
                 Spacer(Modifier.height(28.dp))
                 state.snapshot.windows.forEachIndexed { index, window ->
                     if (index > 0) { Spacer(Modifier.height(24.dp)); HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant); Spacer(Modifier.height(24.dp)) }
-                    QuotaWindowCard(window, prefs.showRemaining)
+                    QuotaWindowCard(window, prefs.showRemaining, now = now)
                 }
                 Spacer(Modifier.height(24.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -161,7 +167,7 @@ private fun Dashboard(state: AppState, prefs: PreferencesState, model: MainViewM
             }
         }
         Spacer(Modifier.height(16.dp))
-        val stale = Instant.now().epochSecond - state.snapshot.fetchedAt > prefs.refreshMinutes * 120
+        val stale = now - state.snapshot.fetchedAt > prefs.refreshMinutes * 120
         if (state.failure != null || stale) {
             Notice(state.failure?.userMessage() ?: "数据较旧", "仍显示最后成功获取的额度。", Icons.Outlined.Info)
             if (state.failure in listOf(FailureKind.AUTH, FailureKind.STORAGE)) TextButton(onClick = model::startLogin) { Text("重新连接") }
@@ -175,13 +181,13 @@ private fun Dashboard(state: AppState, prefs: PreferencesState, model: MainViewM
 }
 
 @Composable
-fun QuotaWindowCard(window: QuotaWindow, remaining: Boolean, compact: Boolean = false) {
+fun QuotaWindowCard(window: QuotaWindow, remaining: Boolean, compact: Boolean = false, now: Long = Instant.now().epochSecond) {
     val value = window.displayedPercent(remaining)
     Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {
             Text(window.name, fontSize = if (compact) 13.sp else 15.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(5.dp))
-            Text(resetLabel(window), fontSize = if (compact) 10.sp else 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(resetLabel(window, now), fontSize = if (compact) 10.sp else 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Row(verticalAlignment = Alignment.Bottom) {
             Text(window.percentageLabel(remaining), fontFamily = FontFamily.Monospace, fontSize = if (compact) 32.sp else 46.sp,
@@ -190,7 +196,7 @@ fun QuotaWindowCard(window: QuotaWindow, remaining: Boolean, compact: Boolean = 
         }
     }
     Spacer(Modifier.height(12.dp))
-    SegmentedBar(value, "${window.name}，${if (remaining) "剩余" else "已用"} ${window.percentageLabel(remaining)}%")
+    SegmentedBar(value, "${window.name}，${if (remaining) "剩余" else "已用"} ${if (value == null) "暂不可用" else "${window.percentageLabel(remaining)}%"}")
     Spacer(Modifier.height(6.dp))
     Text(if (remaining) "剩余额度" else "已用额度", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }

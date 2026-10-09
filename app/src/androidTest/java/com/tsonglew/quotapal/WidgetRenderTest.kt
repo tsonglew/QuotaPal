@@ -21,7 +21,8 @@ class WidgetRenderTest {
         fun shell(command: String) { instrumentation.uiAutomation.executeShellCommand(command).use { descriptor ->
             java.io.FileInputStream(descriptor.fileDescriptor).use { it.readBytes() }
         } }
-        shell("appwidget grantbind --package ${context.packageName} --user current")
+        shell("appwidget grantbind --package ${context.packageName} --user 0")
+        instrumentation.uiAutomation.adoptShellPermissionIdentity(android.Manifest.permission.BIND_APPWIDGET)
         try {
             runBlocking { app.repository.demo() }
             listOf(Triple(140, 150, "light"), Triple(280, 150, "dark"), Triple(140, 230, "light")).forEach { (width, height, theme) ->
@@ -58,7 +59,8 @@ class WidgetRenderTest {
             }
         } finally {
             runBlocking { app.repository.logout(); app.reconcileSync() }
-            shell("appwidget revokebind --package ${context.packageName} --user current")
+            instrumentation.uiAutomation.dropShellPermissionIdentity()
+            shell("appwidget revokebind --package ${context.packageName} --user 0")
         }
     }
 

@@ -6,6 +6,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -30,7 +32,7 @@ class WidgetConfigurationActivity : ComponentActivity() {
                 var saving by remember { mutableStateOf(false) }
                 QuotaTheme(theme) {
                     Surface(Modifier.fillMaxSize()) {
-                        Column(Modifier.padding(28.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                        Column(Modifier.safeDrawingPadding().verticalScroll(rememberScrollState()).padding(28.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                             Spacer(Modifier.height(32.dp)); Text("桌面上的 Codex", style = MaterialTheme.typography.headlineMedium)
                             Text("这份设置只影响当前小组件。")
                             Row { Text("显示剩余额度", Modifier.weight(1f)); Switch(remaining, { remaining = it }) }
