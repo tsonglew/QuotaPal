@@ -30,9 +30,10 @@ printf 'no\n' | avdmanager create avd --force -n quotapal-ci \
   --package "system-images;android-${DEVICE_API};${DEVICE_TARGET};x86_64" --device pixel_6 \
   --path "$ANDROID_AVD_HOME/quotapal-ci.avd"
 test -s "$ANDROID_AVD_HOME/quotapal-ci.ini"
+printf '\ndisk.dataPartition.size=4G\n' >> "$ANDROID_AVD_HOME/quotapal-ci.avd/config.ini"
 "$ANDROID_HOME/emulator/emulator" -list-avds
 "$ANDROID_HOME/emulator/emulator" -avd quotapal-ci -no-window -no-audio -no-boot-anim \
-  -no-snapshot -memory 4096 -cores 2 -gpu swiftshader_indirect > screenshots/emulator-startup.txt 2>&1 &
+  -no-snapshot -partition-size 4096 -memory 4096 -cores 2 -gpu swiftshader_indirect > screenshots/emulator-startup.txt 2>&1 &
 emulator_pid=$!
 sleep 2
 if ! kill -0 "$emulator_pid" 2>/dev/null; then
@@ -40,6 +41,7 @@ if ! kill -0 "$emulator_pid" 2>/dev/null; then
   exit 1
 fi
 python3 scripts/wait_for_android.py "$ANDROID_HOME/platform-tools/adb" 300
+adb -e shell df -h /data | tee screenshots/emulator-data-space.txt
 adb -e shell input keyevent 82
 adb -e shell settings put system screen_off_timeout 2147483647
 for setting in window_animation_scale transition_animation_scale animator_duration_scale; do

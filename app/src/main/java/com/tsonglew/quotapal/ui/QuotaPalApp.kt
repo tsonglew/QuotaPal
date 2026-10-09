@@ -316,7 +316,7 @@ private fun SettingsPage(state: AppState, prefs: PreferencesState, model: MainVi
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(15L, 30L, 60L).forEach { minutes -> FilterChip(prefs.refreshMinutes == minutes, onClick = { model.refreshMinutes(minutes) }, label = { Text("$minutes 分钟", fontSize = 12.sp) }) }
             }
-            Text("后台刷新受系统省电与网络影响，可能延迟。", fontSize = 12.sp, lineHeight = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("后台刷新受系统省电与网络影响，可能延迟。持续失败时每轮最多尝试 3 次，之后等待下一周期或手动刷新。", fontSize = 12.sp, lineHeight = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
     Spacer(Modifier.height(18.dp))

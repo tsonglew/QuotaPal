@@ -65,7 +65,7 @@ fun FailureKind.userMessage(): String = when (this) {
     FailureKind.LIMITED -> "请求过于频繁，请稍后刷新"
     FailureKind.NETWORK -> "网络连接失败，已保留上次数据"
     FailureKind.SERVER -> "服务暂时不可用，已保留上次数据"
-    FailureKind.PROTOCOL -> "额度数据格式发生变化，请稍后重试"
+    FailureKind.PROTOCOL -> "额度格式暂不兼容，请检查更新"
     FailureKind.STORAGE -> "无法读取安全凭据，请重新连接账号"
 }
 

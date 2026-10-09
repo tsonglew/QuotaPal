@@ -11,7 +11,13 @@ class UsageSyncWorker(context: Context, params: WorkerParameters) : CoroutineWor
         val app = applicationContext.quotaApp
         val outcome = app.repository.refresh(inputData.getBoolean("force", false))
         app.updateWidgets()
-        return if (outcome == SyncResult.RETRY || outcome == SyncResult.DEFERRED && inputData.getBoolean("force", false)) Result.retry() else Result.success()
+        val retry = outcome == SyncResult.RETRY || outcome == SyncResult.DEFERRED && inputData.getBoolean("force", false)
+        // Bound this work cycle; a later periodic cycle or explicit user action can try again.
+        return when {
+            !retry -> Result.success()
+            runAttemptCount < 2 -> Result.retry()
+            else -> Result.failure()
+        }
     }
 }
 

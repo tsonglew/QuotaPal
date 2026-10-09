@@ -13,8 +13,8 @@ android {
         applicationId = "com.tsonglew.quotapal"
         minSdk = 29
         targetSdk = 36
-        versionCode = 9
-        versionName = "0.1.0-alpha09"
+        versionCode = 10
+        versionName = "0.1.0-alpha10"
         testInstrumentationRunner = "com.tsonglew.quotapal.QuotaTestRunner"
     }
     buildTypes {
@@ -61,6 +61,7 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
+    androidTestImplementation("androidx.work:work-testing:2.10.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

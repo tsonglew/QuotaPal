@@ -103,7 +103,6 @@ open class QuotaWidget : GlanceAppWidget() {
         foreground: ColorProvider, muted: ColorProvider, track: ColorProvider) {
         val size = LocalSize.current
         val compact = size.height < 100.dp
-        val short = size.height < 70.dp
         val snapshot = state.snapshot
         val notice = snapshot?.quotaNotice()
         val restricted = snapshot?.allowed == false || snapshot?.limitReached == true
@@ -116,7 +115,7 @@ open class QuotaWidget : GlanceAppWidget() {
             windows.joinToString { "${it.name} ${it.percentageLabel(remaining)}${if (it.usedPercent != null) "%" else ""}，${resetLabel(it)}" },
             snapshot?.let { "最后成功更新于 $timestamp" }, state.failure?.userMessage()).joinToString("，")
         Column(GlanceModifier.fillMaxSize().appWidgetBackground().background(background).cornerRadius(20.dp)
-            .padding(horizontal = 6.dp, vertical = if (compact) (if (short) 2.dp else 4.dp) else 6.dp)
+            .padding(horizontal = 6.dp, vertical = if (compact) 2.dp else 6.dp)
             .semantics { contentDescription = summary }.clickable(actionStartActivity<MainActivity>())) {
             if (compact) {
                 val window = windows.firstOrNull()
@@ -131,16 +130,17 @@ open class QuotaWidget : GlanceAppWidget() {
                 Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     if (metered) {
                         Text(when { state.failure != null -> "旧"; state.demo -> "示例"; remaining -> "剩余"; else -> "已用" },
-                            style = TextStyle(color = muted, fontSize = if (short) 6.sp else 7.sp), modifier = GlanceModifier.defaultWeight(), maxLines = 1)
-                        Text(value, style = TextStyle(color = foreground, fontSize = if (short) 8.sp else 10.sp,
+                            style = TextStyle(color = muted, fontSize = 7.sp), modifier = GlanceModifier.defaultWeight(), maxLines = 1)
+                        Text(value, style = TextStyle(color = foreground, fontSize = 10.sp,
                             fontWeight = FontWeight.Medium), maxLines = 1)
                     } else Text(value, style = TextStyle(color = foreground, fontSize = 10.sp),
                         modifier = GlanceModifier.defaultWeight(), maxLines = 1)
                     Spacer(GlanceModifier.width(4.dp))
-                    RefreshControl(state, muted, 28.dp, if (short) 8.sp else 10.sp)
+                    RefreshControl(state, muted, 28.dp, 10.sp)
                 }
                 Spacer(GlanceModifier.defaultWeight())
-                Text(timestamp, style = TextStyle(color = muted, fontSize = if (short) 6.sp else 8.sp), maxLines = 1)
+                // Keep every compact variant within the 50 dp minimum, including legacy hosts.
+                Text(timestamp, style = TextStyle(color = muted, fontSize = 6.sp), maxLines = 1)
             } else {
                 if (windows.isEmpty()) {
                     Column {

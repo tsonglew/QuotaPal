@@ -21,6 +21,9 @@ class TestQuotaApplication : QuotaPalApplication() {
     val usageRequests = AtomicInteger()
     @Volatile var usedPercent = 38
     @Volatile var responseDelayMillis = 0L
+    @Volatile var usageStatusCode = 200
+    @Volatile var usageRetryAfter: String? = null
+    @Volatile var usageTransportFailure: java.io.IOException? = null
     override val api by lazy {
         CodexApi(OkHttpClient.Builder().addInterceptor { chain ->
             if (chain.request().url.encodedPath != "/backend-api/wham/usage") {
@@ -28,7 +31,9 @@ class TestQuotaApplication : QuotaPalApplication() {
             }
             usageRequests.incrementAndGet()
             Thread.sleep(responseDelayMillis)
-            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
+            usageTransportFailure?.let { throw it }
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(usageStatusCode).message("Test response")
+                .apply { usageRetryAfter?.let { header("Retry-After", it) } }
                 .body("""{"rate_limit":{"primary_window":{"used_percent":$usedPercent,"limit_window_seconds":604800}}}"""
                     .toResponseBody("application/json".toMediaType())).build()
         }.build())

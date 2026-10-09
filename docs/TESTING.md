@@ -61,3 +61,5 @@ CI 产物 `android-build` 含 debug APK、单元测试与 lint 报告；设备�
 `lifecycle_smoke.sh` 使用测试包的合成账号拦截器，seed 写入真实 Keystore／Room 并绑定平台组件，外部停止进程后 restore 检查缓存时间、账号、同一组件 ID／独立设置、组件重新显示和唯一周期任务。普通测试套件跳过该两阶段测试，CI 在普通套件通过后单独执行，保存 lifecycle-seed.txt／lifecycle-restore.txt；am instrument 的退出码不能证明通过，脚本还要求 OK (1 test)。
 
 仅在测试模拟器上使用 `LIFECYCLE_RESTART=reboot` 执行实际设备重启，或先装旧版 debug APK、再用 `LIFECYCLE_RESTART=upgrade LIFECYCLE_APK=/absolute/path/new.apk` 验证覆盖升级。升级断言要求版本号实际增加，不接受同版本重装作为版本迁移证明。`LIFECYCLE_OUTPUT_DIR` 可改证据目录。测试结束清除合成账号及测试组件；失败后如需恢复可重跑完整 harness。真实账号和 OEM 验证仍单独执行。
+
+alpha10 增加 Worker 设备回归：合成离线／超时异常、503 与 429，检查原成功快照不变、每轮最多 3 次、Retry-After 阻止额外请求和新尝试恢复。此回归验证传输故障处理与 Worker 返回值，不代替设备实际断网、Doze 或 OEM 后台限制。
