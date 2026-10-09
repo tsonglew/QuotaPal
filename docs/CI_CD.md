@@ -67,3 +67,9 @@ GitHub 环境与部署行为参见 [官方环境说明](https://docs.github.com/
 手动运行 Android CI 时可勾选 `build-release`，在所选分支验证 minified release 和四版本页面流程，不读取正式签名 secrets，也不创建 GitHub Release。用于在合并／打 tag 前排查发布构建问题。
 
 Android 17 使用官方 SDK 的 `37.0/google_apis` 与 `37.2/google_apis_ps16k` 镜像及 4 GB RAM；后者覆盖 16 KB 页面配置。签名脚本显式使用 `zipalign -P 16` 并验证对齐。此处是配置说明，实际结果见对应运行记录。
+
+### Android 17 启动就绪
+
+运行 37986219241 的 API 37.0／37.2 在应用测试开始前分别因 input 服务缺失／Broken pipe 失败；四个既有版本设备测试通过。Android 17 改由 `scripts/android17_device_ci.sh` 启动相同官方镜像，`wait_for_android.py` 要求启动标记、核心服务、包查询、settings 与无操作按键命令连续三轮成功，再运行原有完整测试及可选 minified release 检查。启动／logcat 日志随设备证据上传；失败继续使统一 gate 失败，不跳过检查。新启动流程尚待云端验证。
+
+所有普通工作流 job 检出事件的不可变 `github.sha`，避免设备 job 启动较晚时读到分支新提交；可复用工作流仍支持显式 ref。

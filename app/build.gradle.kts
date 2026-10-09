@@ -15,7 +15,7 @@ android {
         targetSdk = 36
         versionCode = 8
         versionName = "0.1.0-alpha08"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.tsonglew.quotapal.QuotaTestRunner"
     }
     buildTypes {
         release {

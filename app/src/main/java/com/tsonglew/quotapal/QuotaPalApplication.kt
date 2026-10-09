@@ -14,9 +14,9 @@ import com.tsonglew.quotapal.widget.SlimQuotaWidgetReceiver
 import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.*
 
-class QuotaPalApplication : Application() {
+open class QuotaPalApplication : Application() {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    val api by lazy { CodexApi() }
+    open val api by lazy { CodexApi() }
     val settings by lazy { SettingsStore(this) }
     val repository by lazy {
         UsageRepository(api, CredentialVault(this), Room.databaseBuilder(this, QuotaDatabase::class.java, "quota.db").build().snapshots(), settings)

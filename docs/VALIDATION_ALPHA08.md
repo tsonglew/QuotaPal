@@ -18,3 +18,17 @@ Android 17 本地镜像首次启动完成，系统报告 Android 17／API 37／4
 Android 17 上新增真实 AppWidgetHost 回归通过（9.883 秒）：280×150 → 140×230 → 140×150，检查实际 RemoteViews 从两窗口到单窗口布局；关闭宿主删除实例后，等待平台删除广播清除已用／深色配置；重新分配实例得到不同 ID 和默认剩余／系统主题。debug 与测试 APK 重建、lint 通过。该回归为第 14 个设备测试，独立执行通过，未据此声称完整 14 项单轮通过。
 
 本地加入 debug 宿主缩放方法后的 APK SHA-256 为 `fd5e9c30529a4523bfeca6cf458370cc9ff97df779bd51de04ab52c80f2835cf`；上文哈希对应最初 3f0d798 构建。生产源码未变更。
+
+## 已连接状态与完整重跑
+
+测试 runner 注入仅测试包使用的 Application／OkHttp 传输：额度请求返回合成数据，其他请求以网络失败结束，不向真实服务发送测试凭据。生产 Application 仅开放 API 属性覆盖，正常运行继续使用原有客户端。
+
+真实 RemoteViews 点击绑定的刷新 PendingIntent：一个标准＋两个紧凑实例，连续点击两次，合成额度从剩余 62% 更新到 83%；三个实例均观察到刷新中符号与新值，计数仅增加一次，真实 WorkManager 数据库仍只有一个活跃周期任务。最初测试直接对 TextView performClick 无监听，修正为点击 Glance 的实际包装层；双实例版两项通过后扩为三个实例。完整重跑首次因测试传输对授权请求抛出非 IOException 崩溃，改为正常离线失败后，15 项设备测试单轮全部通过（123.716 秒）。
+
+47 项 JVM、lint、App／测试 APK 构建通过；新 APK SHA-256：`7b9598b03f9c4ddb907b4817f0ff038c1b9eaed11d5d01fc73f31e43256d698f`。D04／D06 完成，实际小米、OEM／进程恢复和长期观察不据此完成。
+
+## 云端启动失败与修复
+
+[37986219241](https://github.com/tsonglew/QuotaPal/actions/runs/37986219241) 的交付、构建及 API 29／31／35／36 设备 job 成功。API 37.0 在 boot_completed=1 后 input/settings 服务不可用；37.2 发送按键时 Broken pipe，均未开始应用测试，统一 gate 失败。保留失败证据。
+
+新增 Android 17 启动脚本：相同官方镜像与 4 GB RAM，等待核心服务注册、包查询、settings 与无操作按键连续三轮成功后执行完整原测试，保存启动及 logcat 日志。14 项交付脚本测试（含这两种实际启动失败回归）、actionlint、ShellCheck 通过；就绪探测在本地 Android 17 成功。云端新启动流程及 16 KB 仍待运行。所有普通 CI job 改为检出事件 SHA，避免分支移动使不同 job 测试不同提交。

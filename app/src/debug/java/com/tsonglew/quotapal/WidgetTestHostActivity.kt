@@ -22,6 +22,8 @@ class WidgetTestHostActivity : Activity() {
     lateinit var widgetView: AppWidgetHostView
     var secondaryWidgetView: AppWidgetHostView? = null
         private set
+    var thirdWidgetView: AppWidgetHostView? = null
+        private set
     private var secondaryWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
     private lateinit var host: AppWidgetHost
     private lateinit var root: FrameLayout
@@ -85,6 +87,14 @@ class WidgetTestHostActivity : Activity() {
         secondaryWidgetId = id
         secondaryWidgetView = view
         root.addView(view, widgetLayout(view, 140, 150, Gravity.TOP or Gravity.CENTER_HORIZONTAL))
+        return id
+    }
+
+    fun addThirdWidget(): Int {
+        check(thirdWidgetView == null)
+        val (id, view) = bindWidget(280, 70, true)
+        thirdWidgetView = view
+        root.addView(view, widgetLayout(view, 280, 70, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
         return id
     }
 

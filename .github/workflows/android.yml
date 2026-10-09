@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
       - uses: actions/setup-go@v5
         with:
@@ -39,8 +39,8 @@ jobs:
         run: |
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
           actionlint
-          shellcheck scripts/publish_release.sh scripts/device_ci.sh scripts/release_smoke.sh
-          python3 -m py_compile scripts/release_ui_smoke.py
+          shellcheck scripts/*.sh
+          python3 -m py_compile scripts/release_ui_smoke.py scripts/wait_for_android.py
           python3 -m unittest discover -s scripts/tests -v
   build:
     runs-on: ubuntu-latest
@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
       - name: Validate delivery tooling
         run: python3 -m unittest discover -s scripts/tests -v
@@ -127,7 +127,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
       - uses: actions/setup-java@v4
         with:
@@ -153,6 +153,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - uses: reactivecircus/android-emulator-runner@v2
+        if: ${{ !startsWith(format('{0}', matrix.api-level), '37.') }}
         env:
           RELEASE_APK: ${{ inputs.build-release && 'release-unsigned/app-release-unsigned.apk' || '' }}
         with:
@@ -163,6 +164,13 @@ jobs:
           profile: pixel_6
           disable-animations: true
           script: bash scripts/device_ci.sh
+      - name: Android 17 device tests with framework readiness checks
+        if: ${{ startsWith(format('{0}', matrix.api-level), '37.') }}
+        env:
+          DEVICE_API: ${{ matrix.api-level }}
+          DEVICE_TARGET: ${{ matrix.target }}
+          RELEASE_APK: ${{ inputs.build-release && 'release-unsigned/app-release-unsigned.apk' || '' }}
+        run: bash scripts/android17_device_ci.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
