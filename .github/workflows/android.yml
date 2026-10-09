@@ -20,6 +20,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
       - uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
@@ -27,7 +29,7 @@ jobs:
       - name: Install compile platform
         run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
       - name: Unit tests, lint and APK
-        run: ./gradlew testDebugUnitTest lintDebug assembleDebug --stacktrace
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -48,6 +50,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
       - uses: android-actions/setup-android@v3
         with:
           packages: platform-tools

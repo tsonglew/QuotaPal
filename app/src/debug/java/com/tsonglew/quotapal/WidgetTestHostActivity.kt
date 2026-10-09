@@ -4,6 +4,7 @@ import android.app.Activity
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetHostView
 import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProviderInfo
 import android.content.ComponentName
 import android.graphics.Color
 import android.os.Bundle
@@ -28,7 +29,7 @@ class WidgetTestHostActivity : Activity() {
             putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, width)
             putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, height)
             putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, height)
-            putInt(AppWidgetManager.OPTION_APPWIDGET_HOST_CATEGORY, AppWidgetManager.WIDGET_CATEGORY_HOME_SCREEN)
+            putInt(AppWidgetManager.OPTION_APPWIDGET_HOST_CATEGORY, AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN)
             if (android.os.Build.VERSION.SDK_INT >= 31)
                 putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, arrayListOf(SizeF(width.toFloat(), height.toFloat())))
         }
