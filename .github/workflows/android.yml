@@ -147,7 +147,7 @@ jobs:
         with:
           name: android-release-unsigned
           path: release-unsigned
-      - name: Install pinned emulator runtime dependency
+      - name: Install emulator runtime dependency
         if: ${{ startsWith(format('{0}', matrix.api-level), '37.') }}
         run: |
           sudo apt-get update

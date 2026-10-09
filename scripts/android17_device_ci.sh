@@ -44,7 +44,7 @@ printf '\ndisk.dataPartition.size=4G\n' >> "$ANDROID_AVD_HOME/quotapal-ci.avd/co
 "$emulator_binary" -list-avds
 "$emulator_binary" -avd quotapal-ci -no-window -no-audio -no-boot-anim \
   -no-snapshot -partition-size 4096 -memory 4096 -cores 2 -gpu software \
-  -feature VulkanNativeSwapchain -feature GuestUsesAngle -verbose > screenshots/emulator-startup.txt 2>&1 &
+  -feature Vulkan -feature VulkanNativeSwapchain -feature GuestUsesAngle -verbose > screenshots/emulator-startup.txt 2>&1 &
 emulator_pid=$!
 sleep 2
 if ! kill -0 "$emulator_pid" 2>/dev/null; then

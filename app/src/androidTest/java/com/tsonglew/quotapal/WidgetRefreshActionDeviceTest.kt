@@ -51,15 +51,40 @@ class WidgetRefreshActionDeviceTest {
                 app.usedPercent = 17
                 app.responseDelayMillis = 2_000
                 runBlocking { app.settings.syncResult(null, lastAttemptAt = 0) }
-                scenario.onActivity { activity ->
-                    var refresh: android.view.View = labels(activity.widgetView).single { it.contentDescription == "刷新额度" }
-                    // Glance attaches the PendingIntent to a wrapper around the TextView.
-                    while (!refresh.hasOnClickListeners() && refresh.parent is android.view.View) {
-                        refresh = refresh.parent as android.view.View
+                // RemoteViews applies asynchronously and semantics may belong to a
+                // wrapper rather than its TextView. Wait for the actual action view.
+                fun descendants(view: android.view.View): List<android.view.View> =
+                    listOf(view) + if (view is android.view.ViewGroup) {
+                        (0 until view.childCount).flatMap { descendants(view.getChildAt(it)) }
+                    } else emptyList()
+                val clickDeadline = android.os.SystemClock.elapsedRealtime() + 20_000
+                var clicked = false
+                var lastTree = ""
+                while (!clicked && android.os.SystemClock.elapsedRealtime() < clickDeadline) {
+                    scenario.onActivity { activity ->
+                        val views = descendants(activity.widgetView)
+                        lastTree = views.joinToString("\n") {
+                            "${it.javaClass.simpleName}: description=${it.contentDescription}, clickable=${it.hasOnClickListeners()}"
+                        }
+                        val actions = views.filter { it.contentDescription?.toString() == "刷新额度" }
+                        org.junit.Assert.assertTrue("Refresh semantics must be unique\n$lastTree", actions.size <= 1)
+                        val action = actions.singleOrNull()
+                        if (action != null) {
+                            var refresh: android.view.View = action
+                            // Glance may attach the PendingIntent to a parent wrapper.
+                            while (!refresh.hasOnClickListeners() && refresh.parent is android.view.View) {
+                                refresh = refresh.parent as android.view.View
+                            }
+                            if (refresh.hasOnClickListeners()) {
+                                org.junit.Assert.assertTrue("Refresh must invoke the RemoteViews PendingIntent", refresh.performClick())
+                                refresh.performClick()
+                                clicked = true
+                            }
+                        }
                     }
-                    org.junit.Assert.assertTrue("Refresh must invoke the RemoteViews PendingIntent", refresh.performClick())
-                    refresh.performClick()
+                    if (!clicked) Thread.sleep(50)
                 }
+                org.junit.Assert.assertTrue("Refresh action must become clickable\n$lastTree", clicked)
                 awaitBoth("…")
                 awaitBoth("83%")
                 assertEquals("Repeated clicks share one request", before + 1, app.usageRequests.get())

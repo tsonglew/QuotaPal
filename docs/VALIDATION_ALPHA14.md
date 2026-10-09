@@ -29,3 +29,5 @@ CI 38002272484 全部终态：API 29／31／35／36 成功，37.0／37.2 在补�
 依据官方 emulator 发布说明测试 VulkanNativeSwapchain composition，日志确认 VulkanNativeSwapchain=1、GuestVulkanOnly=1，自动启用 GuestAngle；通过框架稳定准备，启动 crash buffer 为空。完整原生普通套件 18 项实际测试全部通过（129.937 秒，另 4 项条件探针跳过），包含真实小组件点击及渲染断言。CI 候选使用相同两个 feature 参数并保留 verbose 实际值日志；本地 ARM64 通过不证明云端 x86_64／16KB，不据此勾选 E06。
 
 - Vulkan composition 补充回归：外部强停 seed／restore 均通过，真实时区／时钟回退／DST 探针通过（9.6 秒），结束 crash buffer 为空。
+
+- CI 38004158377 终态：29／31／36 成功；35 真实刷新测试查找 TextView 上的描述失败，改为等待完整视图树中唯一刷新语义与实际点击入口，本地 API 35 两项刷新测试（9.088 秒）及完整 18 项普通套件（123.699 秒）通过，保留三组件／单请求／刷新中断言。37 两组在渲染器初始化前失败，实际日志 API level: 3、Vulkan=0、VulkanNativeSwapchain=1；本地同路径 API level: 37、Vulkan=1。下一候选显式开启 Vulkan 以消除该配置冲突，仍须云端完整验证，不认定已修复。X11 备用库名加载成功，不归因缺库。

@@ -81,3 +81,5 @@ API 37.0／37.2 云端可重复出现 SurfaceFlinger 的 ReadColorBufferDma 断�
 Android 17 job 显式安装 Linux 运行依赖 libpulse0；初次固定版本对照在缺少 libpulse.so.0 时提前失败，没有执行设备测试，不计作通过。
 
 Android 17 新候选启用官方 Vulkan composition（`-feature VulkanNativeSwapchain -feature GuestUsesAngle`），使用与本地完整 18 项测试通过时相同的参数；verbose 日志保留实际特性值。仅本地 ARM64 已通过，云端 x86_64／16KB 仍待独立验证，不视为 gate 修复完成。
+
+运行 38004158377 显示云端 API 自动识别为 3 后关闭 Vulkan，composition 已开启但无法初始化；候选增加 `-feature Vulkan`，使实际值与本地通过配置的 Vulkan=1 一致。此配置修正仍待新云端验收。
