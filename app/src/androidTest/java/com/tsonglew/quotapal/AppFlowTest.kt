@@ -49,6 +49,21 @@ class AppFlowTest {
         compose.onNodeWithTag("background-brand-picker").assertDoesNotExist()
     }
 
+    @Test fun privacyNoticeIsAvailableOfflineInSettingsAndBeforeLogin() {
+        compose.onNodeWithTag("tab-settings").performClick()
+        compose.onNodeWithTag("privacy-notice-button").performScrollTo().performClick()
+        compose.onNodeWithTag("privacy-notice-text").assertTextContains("额度缓存本身不是加密数据库", substring = true)
+        saveDeviceScreenshot(compose.activity, "privacy-notice", compose.onNode(isDialog()).captureToImage().asAndroidBitmap())
+        compose.onNodeWithTag("privacy-notice-close").performClick()
+        compose.onNodeWithTag("privacy-notice-text").assertDoesNotExist()
+        compose.onNodeWithTag("tab-quota").performClick()
+        compose.onNodeWithTag("connect-button").performClick()
+        compose.onNodeWithTag("privacy-notice-button").performScrollTo().performClick()
+        compose.onNodeWithTag("privacy-notice-text").assertTextContains("此操作不撤销远程授权", substring = true)
+        compose.onNodeWithTag("privacy-notice-close").performClick()
+        compose.onNodeWithText("取消", substring = false).performClick()
+    }
+
     private fun screenshot(name: String) {
         compose.waitForIdle()
         saveDeviceScreenshot(compose.activity, name, compose.onRoot().captureToImage().asAndroidBitmap())

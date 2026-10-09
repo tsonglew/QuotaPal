@@ -332,6 +332,7 @@ private fun SettingsPage(state: AppState, prefs: PreferencesState, model: MainVi
             if (state.connected || state.demo) TextButton(onClick = { confirmLogout = true }, modifier = Modifier.testTag("logout-button")) { Text(if (state.demo) "退出示例模式" else "退出并清除本机数据", color = MaterialTheme.colorScheme.error) }
         }
     }
+    PrivacyNoticeEntry()
     Spacer(Modifier.height(24.dp))
     Text("QuotaPal ${com.tsonglew.quotapal.BuildConfig.VERSION_NAME}\n独立第三方工具 · 连接能力处于实验阶段\n应用仅获取额度；登录凭据的权限可能覆盖更多能力。", fontSize = 11.sp,
         lineHeight = 19.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -345,7 +346,7 @@ private fun SettingsPage(state: AppState, prefs: PreferencesState, model: MainVi
 private fun LoginDialog(login: LoginState, cancel: () -> Unit, retry: () -> Unit) {
     val context = LocalContext.current
     AlertDialog(onDismissRequest = cancel, title = { Text("连接 Codex") }, text = {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("在 OpenAI 页面完成设备登录。不要在 QuotaPal 输入账号密码。", lineHeight = 22.sp)
             Text("首次使用需在 ChatGPT 安全设置中启用设备码登录；工作区账号可能需要管理员开启。", fontSize = 12.sp,
                 lineHeight = 19.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -358,6 +359,7 @@ private fun LoginDialog(login: LoginState, cancel: () -> Unit, retry: () -> Unit
             }
             Text("设备登录与额度接口为实验性兼容接入。凭据加密保存在本机，应用不执行模型请求或消耗重置次数。", fontSize = 11.sp,
                 lineHeight = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            PrivacyNoticeEntry()
         }
     }, confirmButton = {
         if (login.error != null) TextButton(onClick = retry) { Text("重新获取") }

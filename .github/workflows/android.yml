@@ -4,6 +4,11 @@ on:
     branches: [master, 'codex/**']
   pull_request:
   workflow_dispatch:
+    inputs:
+      build-release:
+        description: Also validate the minified release APK without publishing
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       ref:
@@ -34,7 +39,8 @@ jobs:
         run: |
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
           actionlint
-          shellcheck scripts/publish_release.sh scripts/device_ci.sh
+          shellcheck scripts/publish_release.sh scripts/device_ci.sh scripts/release_smoke.sh
+          python3 -m py_compile scripts/release_ui_smoke.py
           python3 -m unittest discover -s scripts/tests -v
   build:
     runs-on: ubuntu-latest
@@ -129,12 +135,19 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - name: Install compile platform
         run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - uses: actions/download-artifact@v4
+        if: inputs.build-release
+        with:
+          name: android-release-unsigned
+          path: release-unsigned
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - uses: reactivecircus/android-emulator-runner@v2
+        env:
+          RELEASE_APK: ${{ inputs.build-release && 'release-unsigned/app-release-unsigned.apk' || '' }}
         with:
           api-level: ${{ matrix.api-level }}
           arch: x86_64

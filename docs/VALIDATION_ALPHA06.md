@@ -16,3 +16,7 @@
 测试不使用真实账号凭据；真实额度请求由 MockWebServer 验证。小米 Android 17 的实际桌面点击、限流、网络与清理后台后的恢复仍待真机确认，不能由模拟器替代。
 
 [Android 官方任务定义](https://developer.android.com/develop/background-work/background-tasks/persistent/getting-started/define-work)说明 expedited 仍可能受到系统负载或配额影响，因此即时尝试与后台续办分开。系统强制停止后仍需用户重新打开应用。
+
+## GitHub 验证
+
+提交 `db3d853c471aafb54b8b8000a4d5983560bde707` 的 [CI 37981492470](https://github.com/tsonglew/QuotaPal/actions/runs/37981492470) 全部成功：交付检查、构建、单元测试、lint、API 29／31／35／36 设备测试与统一 CI gate。此结果不包含真机验收或正式签名发布。

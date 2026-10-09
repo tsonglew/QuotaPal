@@ -6,17 +6,20 @@
 
 基于原生界面截图合成的展示效果图，额度均为示例数据。[查看原生截图](docs/SCREENSHOTS.md)。
 
-当前状态：`0.1.0-alpha03` 新增独立 2×1 单行桌面组件，保留无短周期／无周期额度状态说明。36 项单元测试、lint、9 项 Android 35 设备测试通过。Codex 直连接入仍为实验性；真实登录、续期和连续自用仍需验证。
+当前开发分支版本：`0.1.0-alpha07`（尚未合并）。已加入分品牌后台引导、小组件即时手动刷新与离线隐私说明。alpha06 的 45 项单元测试、lint、构建和 API 29／31／35／36 设备矩阵全部通过；alpha07 本地构建与隐私入口验证通过。已有小米 Android 17 真机连接成功反馈，真实续期、清理后更新及长期自用仍待验收。
 
 - [开发计划](docs/DEVELOPMENT_PLAN.md)
 - [开发与验收 checklist](docs/DEVELOPMENT_CHECKLIST.md)
 - [GitHub milestones](https://github.com/tsonglew/QuotaPal/milestones)
 - [实时开发进度](docs/PROGRESS.md)
 - [CI/CD、预览 Deployments 与签名发布](docs/CI_CD.md)
+- [隐私说明与数据流](docs/PRIVACY.md)
+- [后台更新引导](docs/BACKGROUND_GUIDE.md)
+- [小组件刷新修复验证](docs/VALIDATION_ALPHA06.md)
 - [Codex 接入证据与边界](docs/CODEX_INTEGRATION.md)
 - [界面规格](docs/UI_SPEC.md)
 - [测试与自用验收](docs/TESTING.md)
-- [本次修复 PR](https://github.com/tsonglew/QuotaPal/pull/8)
+- [历史修复 PR](https://github.com/tsonglew/QuotaPal/pull/8)
 - [alpha03 验证记录与 2×1 安装包](docs/VALIDATION_ALPHA03.md)
 - [alpha02 验证记录](docs/VALIDATION_ALPHA02.md)
 - [首版验证与 APK 校验和](docs/VALIDATION.md)
