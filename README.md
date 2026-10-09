@@ -2,6 +2,10 @@
 
 面向 Android 的 Codex 额度监控 App，参考 Nowdex 的额度速览与桌面小组件体验。首版支持单 Codex 账号，先自用验证，再公开发布。
 
+![QuotaPal 浅色与深色界面，以及 2×1、标准和宽版桌面小组件预览](docs/assets/quotapal-preview.png)
+
+基于原生界面截图合成的展示效果图，额度均为示例数据。[查看原生截图](docs/SCREENSHOTS.md)。
+
 当前状态：`0.1.0-alpha03` 新增独立 2×1 单行桌面组件，保留无短周期／无周期额度状态说明。36 项单元测试、lint、9 项 Android 35 设备测试通过。Codex 直连接入仍为实验性；真实登录、续期和连续自用仍需验证。
 
 - [开发计划](docs/DEVELOPMENT_PLAN.md)
