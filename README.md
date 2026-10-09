@@ -2,7 +2,7 @@
 
 面向 Android 的 Codex 额度监控 App，参考 Nowdex 的额度速览与桌面小组件体验。首版支持单 Codex 账号，先自用验证，再公开发布。
 
-当前状态：Android MVP 开发中，使用实验性 Codex 直连接入。真实额度只读探测已成功，Android 登录与续期仍需验证。
+当前状态：首版实现与自动验证已完成，使用实验性 Codex 直连接入。27 项单元测试、lint、4 项 Android 35 设备测试通过。真实额度只读探测已成功，Android 真实登录、续期和连续自用仍需验证。
 
 - [开发计划](docs/DEVELOPMENT_PLAN.md)
 - [开发与验收 checklist](docs/DEVELOPMENT_CHECKLIST.md)
@@ -12,6 +12,8 @@
 - [界面规格](docs/UI_SPEC.md)
 - [测试与自用验收](docs/TESTING.md)
 - [开发 PR](https://github.com/tsonglew/QuotaPal/pull/7)
+- [本次验证与 APK 校验和](docs/VALIDATION.md)
+- [原生页面和组件截图](docs/SCREENSHOTS.md)
 
 Android 10+，Kotlin 2.1.21、Compose、Glance、Room、DataStore 和 WorkManager。固定构建链为 AGP 8.10.1、Gradle 8.11.1、JDK 17，compileSdk／targetSdk 36。
 
