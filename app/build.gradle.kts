@@ -13,8 +13,8 @@ android {
         applicationId = "com.tsonglew.quotapal"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0-alpha01"
+        versionCode = 2
+        versionName = "0.1.0-alpha02"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -28,7 +28,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
     testOptions { unitTests.isReturnDefaultValues = true }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     lint { abortOnError = true }

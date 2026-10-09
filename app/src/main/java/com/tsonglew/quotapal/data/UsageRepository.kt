@@ -119,11 +119,12 @@ class UsageRepository(
         }
     }
 
-    suspend fun demo() = withContext(Dispatchers.IO) {
+    suspend fun demo(snapshot: UsageSnapshot = demoSnapshot(now())) = withContext(Dispatchers.IO) {
+        require(snapshot.accountId == "demo")
         generation.incrementAndGet()
         lock.withLock {
             vault.clear(); dao.clear(); settings.demo(true); settings.syncResult(null, lastAttemptAt = 0)
-            mutableState.value = AppState(true, snapshot = demoSnapshot(now()), demo = true)
+            mutableState.value = AppState(true, snapshot = snapshot, demo = true)
         }
     }
 

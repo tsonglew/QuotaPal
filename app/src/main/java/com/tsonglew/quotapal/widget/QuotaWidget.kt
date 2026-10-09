@@ -62,16 +62,21 @@ class QuotaWidget : GlanceAppWidget() {
                 Text(state.failure?.userMessage() ?: "轻点打开 QuotaPal", style = TextStyle(color = muted, fontSize = 11.sp))
             } else {
                 val windows = state.snapshot.windows.take(if (size.width >= 280.dp || size.height >= 230.dp) 2 else 1)
-                if (size.width >= 280.dp && windows.size > 1) {
+                val notice = state.snapshot.quotaNotice()
+                if (windows.isEmpty()) {
+                    Text(notice?.title ?: "未提供周期额度", style = TextStyle(color = foreground, fontSize = 16.sp, fontWeight = FontWeight.Medium), maxLines = 2)
+                    Spacer(GlanceModifier.height(6.dp))
+                    Text(notice?.description ?: "请以账号实际权益为准。", style = TextStyle(color = muted, fontSize = 10.sp), maxLines = 3)
+                } else if (size.width >= 280.dp && windows.size > 1) {
                     Row(GlanceModifier.fillMaxWidth()) {
                         windows.forEachIndexed { index, window ->
                             if (index > 0) Spacer(GlanceModifier.width(18.dp))
-                            Column(GlanceModifier.defaultWeight()) { Window(window, remaining, foreground, muted, track) }
+                            Column(GlanceModifier.defaultWeight()) { Window(window, remaining, foreground, muted, track, notice?.widgetLabel) }
                         }
                     }
                 } else windows.forEachIndexed { index, window ->
                     if (index > 0) Spacer(GlanceModifier.height(12.dp))
-                    Window(window, remaining, foreground, muted, track)
+                    Window(window, remaining, foreground, muted, track, notice?.widgetLabel)
                 }
                 Spacer(GlanceModifier.defaultWeight())
                 Text(if (state.demo) "示例数据 · ${absoluteTime(state.snapshot.fetchedAt)}" else
@@ -82,14 +87,15 @@ class QuotaWidget : GlanceAppWidget() {
     }
 
     @Composable
-    private fun Window(window: QuotaWindow, remaining: Boolean, foreground: ColorProvider, muted: ColorProvider, track: ColorProvider) {
+    private fun Window(window: QuotaWindow, remaining: Boolean, foreground: ColorProvider, muted: ColorProvider, track: ColorProvider, note: String?) {
         Column {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(window.name, style = TextStyle(color = foreground, fontSize = 11.sp), modifier = GlanceModifier.defaultWeight(), maxLines = 2)
             Text("${window.percentageLabel(remaining)}${if (window.usedPercent != null) "%" else ""}",
-                style = TextStyle(color = foreground, fontSize = 25.sp, fontWeight = FontWeight.Medium))
+                style = TextStyle(color = foreground, fontSize = if (window.usedPercent == null) 13.sp else 25.sp, fontWeight = FontWeight.Medium))
         }
         Spacer(GlanceModifier.height(4.dp))
+        if (window.usedPercent != null) {
         Row(GlanceModifier.fillMaxWidth()) {
             // Glance containers support at most ten direct children.
             repeat(4) { group ->
@@ -104,8 +110,9 @@ class QuotaWidget : GlanceAppWidget() {
                 }
             }
         }
+        } else Text("用量数据未返回", style = TextStyle(color = muted, fontSize = 10.sp))
         Spacer(GlanceModifier.height(4.dp))
-        Text("${if (remaining) "剩余" else "已用"} · ${resetLabel(window)}", style = TextStyle(color = muted, fontSize = 9.sp), maxLines = 2)
+        Text("${note ?: if (remaining) "剩余" else "已用"} · ${resetLabel(window)}", style = TextStyle(color = muted, fontSize = 9.sp), maxLines = 2)
         }
     }
 }

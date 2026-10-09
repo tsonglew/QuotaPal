@@ -38,6 +38,16 @@ class UsageRepositoryTest {
         assertEquals(FailureKind.SERVER, repository.state.value.failure)
         assertEquals(1000L, settings.value.lastAttemptAt)
     }
+    @Test fun validWindowlessResponseReplacesOldMeteredCache() = runBlocking {
+        dao.record = SnapshotRecord(accountId = "test-account", json = AppJson.encodeToString(demoSnapshot(500).copy(accountId = "test-account")))
+        server.enqueue(MockResponse().setBody("""{"plan_type":"pro","rate_limit":{"allowed":true,"limit_reached":false}}"""))
+        assertEquals(SyncResult.SUCCESS, repository.refresh(true))
+        val snapshot = repository.state.value.snapshot!!
+        assertTrue(snapshot.windows.isEmpty())
+        assertNull(repository.state.value.failure)
+        assertEquals("当前可用", snapshot.quotaNotice()!!.title)
+        assertEquals(snapshot, AppJson.decodeFromString<UsageSnapshot>(dao.record!!.json))
+    }
     @Test fun logoutRejectsAnInflightResponse() = runBlocking {
         server.enqueue(MockResponse().setBody(body).setBodyDelay(200, TimeUnit.MILLISECONDS))
         coroutineScope {

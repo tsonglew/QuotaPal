@@ -34,6 +34,16 @@ token 中的账号和过期字段只用作路由与刷新提示，不以未经�
 
 ## 存储与恢复
 
+### 可选周期窗口
+
+按服务端实际窗口渲染，不根据 `plan_type` 推断额度上限。只有长期窗口时保留其数值，并提示“未提供短周期额度”；无周期窗口但 `allowed=true` 时显示“当前可用”。`allowed=false` 或 `limit_reached=true` 优先显示使用受限。
+
+带套餐信息且明确返回 `rate_limit=null` 的响应可以正常缓存，显示“未提供周期额度”，不报格式错误。缺少百分比或百分比非法时显示“暂不可用”，省略空进度条。缺少字段不等于无限额度，`credits.unlimited` 也不用于推断周期额度无限；空对象、非法 JSON 和窗口类型异常仍视为协议错误，保留旧快照。
+
+这些状态在主界面、组件预览和原生桌面小组件保持一致。官方 [App Server 额度示例](https://learn.chatgpt.com/docs/app-server) 展示可空的周期窗口，但未将其定义为无限额度；本应用采用明确的数据可用性提示。
+
+### 本地数据
+
 - Android Keystore 管理 AES-GCM 加密密钥，凭据密文通过 AtomicFile 写入 noBackupFilesDir。
 - 账号额度快照存入 Room，偏好及每个小组件配置存入 DataStore；禁用云备份与设备迁移。
 - 同账号刷新串行化，旋转后的 refresh token 与 access token 一并替换。已有桌面 Codex 的 refresh token 不会由验证脚本使用。
