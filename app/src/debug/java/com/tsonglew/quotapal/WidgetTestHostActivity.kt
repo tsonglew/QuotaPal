@@ -38,6 +38,7 @@ class WidgetTestHostActivity : Activity() {
         val manager = AppWidgetManager.getInstance(this)
         check(manager.bindAppWidgetIdIfAllowed(widgetId, ComponentName(this, QuotaWidgetReceiver::class.java), options))
         widgetView = host.createView(this, widgetId, manager.getAppWidgetInfo(widgetId))
+        widgetView.setPadding(0, 0, 0, 0)
         val density = resources.displayMetrics.density
         val root = FrameLayout(this).apply {
             setBackgroundColor(Color.rgb(218, 222, 230))

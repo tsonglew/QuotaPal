@@ -83,6 +83,7 @@ class QuotaWidget : GlanceAppWidget() {
 
     @Composable
     private fun Window(window: QuotaWindow, remaining: Boolean, foreground: ColorProvider, muted: ColorProvider, track: ColorProvider) {
+        Column {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(window.name, style = TextStyle(color = foreground, fontSize = 11.sp), modifier = GlanceModifier.defaultWeight(), maxLines = 2)
             Text("${window.percentageLabel(remaining)}${if (window.usedPercent != null) "%" else ""}",
@@ -90,14 +91,22 @@ class QuotaWidget : GlanceAppWidget() {
         }
         Spacer(GlanceModifier.height(5.dp))
         Row(GlanceModifier.fillMaxWidth()) {
-            repeat(28) { index ->
-                if (index > 0) Spacer(GlanceModifier.width(2.dp))
-                Box(GlanceModifier.defaultWeight().height(12.dp).background(
-                    if (window.displayedPercent(remaining)?.let { index < it / 100 * 28 } == true) ColorProvider(Color(0xFF4796EF)) else track)) {}
+            // Glance containers support at most ten direct children.
+            repeat(4) { group ->
+                Row(GlanceModifier.defaultWeight()) {
+                    repeat(7) { offset ->
+                        val index = group * 7 + offset
+                        Box(GlanceModifier.defaultWeight().height(12.dp).padding(horizontal = 1.dp)) {
+                            Box(GlanceModifier.fillMaxSize().background(
+                                if (window.displayedPercent(remaining)?.let { index < it / 100 * 28 } == true) ColorProvider(Color(0xFF4796EF)) else track)) {}
+                        }
+                    }
+                }
             }
         }
         Spacer(GlanceModifier.height(5.dp))
         Text("${if (remaining) "剩余" else "已用"} · ${resetLabel(window)}", style = TextStyle(color = muted, fontSize = 9.sp), maxLines = 2)
+        }
     }
 }
 

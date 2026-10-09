@@ -11,7 +11,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
-import java.io.File
 
 class WidgetRenderTest {
     @Test fun realWidgetsRenderCompactWideTallAndClearOnLogout() {
@@ -42,15 +41,15 @@ class WidgetRenderTest {
                         assertTrue("Widget missing $expected", matched)
                     }
                     awaitText("示例数据")
+                    if (width >= 280 || height >= 230) awaitText("36%")
                     scenario.onActivity { activity ->
                         val visible = text(activity.widgetView)
-                        assertTrue(visible.contains("62%"))
-                        if (width >= 280 || height >= 230) assertTrue(visible.contains("36%"))
                         val view = activity.widgetView
                         val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
                         view.draw(Canvas(bitmap))
-                        val folder = File(context.getExternalFilesDir(null), "screenshots").apply { mkdirs() }
-                        File(folder, "widget-${width}x$height-$theme.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                        saveDeviceScreenshot(context, "widget-${width}x$height-$theme", bitmap)
+                        assertTrue("Missing primary quota: $visible", visible.contains("62%"))
+                        if (width >= 280 || height >= 230) assertTrue("Missing secondary quota: $visible", visible.contains("36%"))
                     }
                     runBlocking { app.repository.logout(); app.updateWidgets() }
                     awaitText("连接你的 Codex")
