@@ -38,7 +38,9 @@ class WidgetRenderTest {
                             scenario.onActivity { matched = text(it.widgetView).contains(expected) }
                             if (!matched) Thread.sleep(100)
                         }
-                        assertTrue("Widget missing $expected", matched)
+                        var actual = ""
+                        scenario.onActivity { actual = "${it.widgetView.width}×${it.widgetView.height}: ${text(it.widgetView)}" }
+                        assertTrue("Widget ${width}x$height missing $expected; actual $actual", matched)
                     }
                     awaitText("示例数据")
                     if (width >= 280 || height >= 230) awaitText("36%")

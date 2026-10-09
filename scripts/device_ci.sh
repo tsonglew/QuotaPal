@@ -4,7 +4,7 @@ set +e
 ./gradlew connectedDebugAndroidTest --stacktrace
 test_result=$?
 mkdir -p screenshots
-adb pull /data/local/tmp/quotapal-screenshots/. ./screenshots/ || true
+adb pull /sdcard/Pictures/QuotaPalTest/. ./screenshots/ || true
 adb shell dumpsys appwidget > screenshots/widget-host-diagnostics.txt
 adb logcat -d -s AndroidRuntime GlanceAppWidget AppWidgetServiceImpl > screenshots/device-diagnostics.txt
 exit "$test_result"

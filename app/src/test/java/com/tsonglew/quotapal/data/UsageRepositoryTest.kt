@@ -25,7 +25,8 @@ class UsageRepositoryTest {
     @After fun stop() { server.shutdown() }
     @Test fun concurrentRefreshesShareOneRequest() = runBlocking {
         server.enqueue(MockResponse().setBody(body).setBodyDelay(100, TimeUnit.MILLISECONDS))
-        coroutineScope { listOf(async { repository.refresh(true) }, async { repository.refresh(true) }).awaitAll() }
+        val outcomes = coroutineScope { listOf(async { repository.refresh(true) }, async { repository.refresh(true) }).awaitAll() }
+        assertEquals(listOf(SyncResult.SUCCESS, SyncResult.SUCCESS), outcomes)
         assertEquals(1, server.requestCount)
         assertEquals("88", repository.state.value.snapshot!!.windows.single().percentageLabel(true))
     }

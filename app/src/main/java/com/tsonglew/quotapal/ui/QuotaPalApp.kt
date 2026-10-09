@@ -321,6 +321,8 @@ private fun LoginDialog(login: LoginState, cancel: () -> Unit, retry: () -> Unit
     AlertDialog(onDismissRequest = cancel, title = { Text("连接 Codex") }, text = {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("在 OpenAI 页面完成设备登录。不要在 QuotaPal 输入账号密码。", lineHeight = 22.sp)
+            Text("首次使用需在 ChatGPT 安全设置中启用设备码登录；工作区账号可能需要管理员开启。", fontSize = 12.sp,
+                lineHeight = 19.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (login.error != null) Text(login.error, color = MaterialTheme.colorScheme.error)
             else if (login.challenge == null) CircularProgressIndicator(Modifier.size(24.dp))
             else {

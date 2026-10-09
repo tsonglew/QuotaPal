@@ -22,6 +22,8 @@ CI 产物 `android-build` 含 debug APK、单元测试与 lint 报告；`android
 
 先用示例检查页面和组件，再连接自己的 Codex。当前接入处于实验阶段，兼容官方开源客户端协议；真实 Android 授权和公开发布适用范围仍需确认。不要复制电脑上的 `auth.json` 到手机。
 
+设备码登录需要先在 ChatGPT 的安全设置中启用；工作区账号可能需要管理员在工作区权限中开启。此要求来自 [官方认证说明](https://learn.chatgpt.com/docs/auth#preferred-device-code-authentication-beta)。
+
 | 步骤 | 应看到的结果 | 记录 |
 | --- | --- | --- |
 | 安装 debug APK，首次打开 | 未连接欢迎页，无虚构账号数据 | 待真机 |

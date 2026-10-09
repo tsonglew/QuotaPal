@@ -1,17 +1,20 @@
 package com.tsonglew.quotapal
 
 import android.content.Context
+import android.content.ContentValues
 import android.graphics.Bitmap
-import androidx.test.platform.app.InstrumentationRegistry
-import java.io.File
+import android.provider.MediaStore
 
 internal fun saveDeviceScreenshot(context: Context, name: String, bitmap: Bitmap) {
-    val folder = File(context.getExternalFilesDir(null), "screenshots").apply { mkdirs() }
-    val file = File(folder, "$name.png")
-    file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-    // AGP uninstalls the tested app on completion, so preserve artifacts before teardown.
-    val command = "mkdir -p /data/local/tmp/quotapal-screenshots && cp '${file.absolutePath}' /data/local/tmp/quotapal-screenshots/"
-    InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(command).use { descriptor ->
-        java.io.FileInputStream(descriptor.fileDescriptor).use { it.readBytes() }
+    // Public test images survive AGP's automatic app uninstall; no storage permission is needed.
+    val values = ContentValues().apply {
+        put(MediaStore.Images.Media.DISPLAY_NAME, "$name.png")
+        put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+        put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/QuotaPalTest")
+        put(MediaStore.Images.Media.IS_PENDING, 1)
     }
+    val resolver = context.contentResolver
+    val uri = checkNotNull(resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values))
+    checkNotNull(resolver.openOutputStream(uri)).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    resolver.update(uri, ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }, null, null)
 }

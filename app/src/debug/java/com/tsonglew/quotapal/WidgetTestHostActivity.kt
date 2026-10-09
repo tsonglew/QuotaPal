@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.util.SizeF
 import android.view.Gravity
 import android.widget.FrameLayout
+import kotlin.math.ceil
 import com.tsonglew.quotapal.widget.QuotaWidgetReceiver
 
 /** Debug-only native host for rendering the real RemoteViews in device tests. */
@@ -37,12 +38,14 @@ class WidgetTestHostActivity : Activity() {
         widgetId = host.allocateAppWidgetId()
         val manager = AppWidgetManager.getInstance(this)
         check(manager.bindAppWidgetIdIfAllowed(widgetId, ComponentName(this, QuotaWidgetReceiver::class.java), options))
-        widgetView = host.createView(this, widgetId, manager.getAppWidgetInfo(widgetId))
-        widgetView.setPadding(0, 0, 0, 0)
+        val info = manager.getAppWidgetInfo(widgetId)
+        widgetView = host.createView(this, widgetId, info)
+        val padding = AppWidgetHostView.getDefaultPaddingForWidget(this, info.provider, null)
         val density = resources.displayMetrics.density
         val root = FrameLayout(this).apply {
             setBackgroundColor(Color.rgb(218, 222, 230))
-            addView(widgetView, FrameLayout.LayoutParams((width * density).toInt(), (height * density).toInt(), Gravity.CENTER))
+            addView(widgetView, FrameLayout.LayoutParams(ceil(width * density).toInt() + padding.left + padding.right,
+                ceil(height * density).toInt() + padding.top + padding.bottom, Gravity.CENTER))
         }
         setContentView(root)
         host.startListening()
