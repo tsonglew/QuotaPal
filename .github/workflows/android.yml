@@ -1,7 +1,7 @@
 name: Android build and tests
 on:
   push:
-    branches: [master, 'codex/**']
+    branches: [master]
   pull_request:
   workflow_dispatch:
 permissions:

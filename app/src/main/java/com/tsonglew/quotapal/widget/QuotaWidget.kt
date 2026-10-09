@@ -3,6 +3,8 @@ package com.tsonglew.quotapal.widget
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -27,9 +29,14 @@ class QuotaWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val app = context.quotaApp
         app.repository.initialize()
-        val state = app.repository.state.value
-        val (remaining, theme) = app.settings.widgetSettings((id as AppWidgetId).appWidgetId)
-        provideContent { Content(state, remaining, theme, context) }
+        val widgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
+        val preferences = app.settings.widgetSettingsFlow(widgetId)
+        val initialPreferences = app.settings.widgetSettings(widgetId)
+        provideContent {
+            val state by app.repository.state.collectAsState()
+            val config by preferences.collectAsState(initialPreferences)
+            Content(state, config.first, config.second, context)
+        }
     }
 
     @Composable
@@ -41,7 +48,7 @@ class QuotaWidget : GlanceAppWidget() {
         val foreground = ColorProvider(if (dark) Color(0xFFF2F3F5) else Color(0xFF17191D))
         val muted = ColorProvider(if (dark) Color(0xFFA4AAB5) else Color(0xFF747C88))
         val track = ColorProvider(if (dark) Color(0xFF282C33) else Color(0xFFE6E9EF))
-        Column(GlanceModifier.fillMaxSize().appWidgetBackground().background(background).padding(16.dp)
+        Column(GlanceModifier.fillMaxSize().appWidgetBackground().background(background).cornerRadius(28.dp).padding(16.dp)
             .clickable(actionStartActivity<MainActivity>())) {
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Codex", style = TextStyle(color = foreground, fontSize = 15.sp, fontWeight = FontWeight.Medium), modifier = GlanceModifier.defaultWeight())

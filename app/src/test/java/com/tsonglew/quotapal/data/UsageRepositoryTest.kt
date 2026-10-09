@@ -9,6 +9,7 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.TimeUnit
+import java.util.Base64
 
 class UsageRepositoryTest {
     private val server = MockWebServer()
@@ -19,7 +20,7 @@ class UsageRepositoryTest {
     @Before fun start() {
         server.start()
         vault.session = Session("access", "refresh", "test-account", 9000)
-        repository = UsageRepository(CodexApi(usageUrl = server.url("/usage").toString(), now = { 1000 }), vault, dao, settings, now = { 1000 })
+        repository = UsageRepository(CodexApi(authBase = server.url("/").toString().trimEnd('/'), usageUrl = server.url("/usage").toString(), now = { 1000 }), vault, dao, settings, now = { 1000 })
     }
     @After fun stop() { server.shutdown() }
     @Test fun concurrentRefreshesShareOneRequest() = runBlocking {
@@ -58,6 +59,28 @@ class UsageRepositoryTest {
         assertEquals(SyncResult.DEFERRED, repository.refresh(true))
         assertEquals(0, server.requestCount)
     }
+    @Test fun concurrentExpiredSessionsRenewOnlyOnceAndSaveRotation() = runBlocking {
+        vault.session = vault.session!!.copy(expiresAt = 900)
+        server.enqueue(MockResponse().setBody(renewed).setBodyDelay(100, TimeUnit.MILLISECONDS))
+        server.enqueue(MockResponse().setBody(body))
+        coroutineScope { listOf(async { repository.refresh(true) }, async { repository.refresh(true) }).awaitAll() }
+        assertEquals(2, server.requestCount)
+        assertEquals("/oauth/token", server.takeRequest().path)
+        assertEquals("/usage", server.takeRequest().path)
+        assertEquals("rotated-refresh", vault.session!!.refreshToken)
+        assertEquals(9000L, vault.session!!.expiresAt)
+        assertNotNull(repository.state.value.snapshot)
+    }
+    @Test fun unauthorizedUsageRenewsAndRetriesExactlyOnce() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(401))
+        server.enqueue(MockResponse().setBody(renewed))
+        server.enqueue(MockResponse().setResponseCode(401))
+        assertEquals(SyncResult.AUTH_REQUIRED, repository.refresh(true))
+        assertEquals(3, server.requestCount)
+        assertEquals(FailureKind.AUTH, repository.state.value.failure)
+        assertEquals("rotated-refresh", vault.session!!.refreshToken)
+        assertNull(repository.state.value.snapshot)
+    }
     private class FakeVault : CredentialStore {
         var session: Session? = null
         override fun read() = session
@@ -78,5 +101,9 @@ class UsageRepositoryTest {
             value = value.copy(lastFailure = kind, retryAt = retryAt, lastAttemptAt = lastAttemptAt ?: value.lastAttemptAt)
         }
     }
-    companion object { const val body = """{"account_id":"test-account","rate_limit":{"primary_window":{"used_percent":12,"limit_window_seconds":604800}}}""" }
+    companion object {
+        const val body = """{"account_id":"test-account","rate_limit":{"primary_window":{"used_percent":12,"limit_window_seconds":604800}}}"""
+        private val claims = Base64.getUrlEncoder().withoutPadding().encodeToString("""{"https://api.openai.com/auth":{"chatgpt_account_id":"test-account"},"exp":9000}""".toByteArray())
+        val renewed = """{"access_token":"header.$claims.signature","refresh_token":"rotated-refresh"}"""
+    }
 }

@@ -108,11 +108,11 @@ class SettingsStore(context: Context) : SyncSettings {
             if (lastAttemptAt != null) p[attempt] = lastAttemptAt
         }
     }
-    suspend fun widgetSettings(id: Int): Pair<Boolean, String> {
-        val p = store.data.first()
-        return (p[booleanPreferencesKey("widget_${id}_remaining")] ?: p[remaining] ?: true) to
+    fun widgetSettingsFlow(id: Int) = store.data.map { p ->
+        (p[booleanPreferencesKey("widget_${id}_remaining")] ?: p[remaining] ?: true) to
             (p[stringPreferencesKey("widget_${id}_theme")] ?: "system")
     }
+    suspend fun widgetSettings(id: Int): Pair<Boolean, String> = widgetSettingsFlow(id).first()
     suspend fun saveWidget(id: Int, showRemaining: Boolean, widgetTheme: String) {
         store.edit { p -> p[booleanPreferencesKey("widget_${id}_remaining")] = showRemaining; p[stringPreferencesKey("widget_${id}_theme")] = widgetTheme }
     }
