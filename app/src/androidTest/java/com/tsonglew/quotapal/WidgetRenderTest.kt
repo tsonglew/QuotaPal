@@ -19,6 +19,121 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class WidgetRenderTest {
+    @Test fun slimWidgetsRenderOneRowQuotaStatesAndIndependentSettings() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val app = context.quotaApp
+        fun shell(command: String) { instrumentation.uiAutomation.executeShellCommand(command).use { descriptor ->
+            java.io.FileInputStream(descriptor.fileDescriptor).use { it.readBytes() }
+        } }
+        shell("appwidget grantbind --package ${context.packageName} --user 0")
+        instrumentation.uiAutomation.adoptShellPermissionIdentity(android.Manifest.permission.BIND_APPWIDGET)
+        try {
+            runBlocking { app.repository.demo() }
+            val cases = listOf(
+                Triple(130, 70, "light"), Triple(140, 70, "dark"), Triple(280, 70, "light"), Triple(260, 50, "dark"),
+            )
+            cases.forEach { (width, height, theme) ->
+                ActivityScenario.launch<WidgetTestHostActivity>(Intent(context, WidgetTestHostActivity::class.java)
+                    .putExtra("width", width).putExtra("height", height).putExtra("slim", true)).use { scenario ->
+                    var id = 0
+                    scenario.onActivity { activity ->
+                        id = activity.widgetId
+                        val info = android.appwidget.AppWidgetManager.getInstance(context).getAppWidgetInfo(id)
+                        if (android.os.Build.VERSION.SDK_INT >= 31) {
+                            assertEquals(2, info.targetCellWidth)
+                            assertEquals(1, info.targetCellHeight)
+                        }
+                    }
+                    runBlocking { app.settings.saveWidget(id, true, theme); app.updateWidgets() }
+                    fun awaitText(expected: String) {
+                        val deadline = System.currentTimeMillis() + 20_000
+                        var matched = false
+                        while (!matched && System.currentTimeMillis() < deadline) {
+                            instrumentation.waitForIdleSync()
+                            scenario.onActivity { matched = text(it.widgetView).contains(expected) }
+                            if (!matched) Thread.sleep(100)
+                        }
+                        var actual = ""
+                        scenario.onActivity { actual = text(it.widgetView) }
+                        assertTrue("Slim ${width}x$height missing $expected; actual $actual", matched)
+                    }
+                    fun capture(name: String) {
+                        lateinit var bitmap: Bitmap
+                        val copied = CountDownLatch(1)
+                        var copyResult = -1
+                        scenario.onActivity { activity ->
+                            val view = activity.widgetView
+                            for (label in texts(view).filter { it.text.isNotEmpty() }) {
+                                val visible = Rect()
+                                assertTrue("Slim text must be visible: ${label.text}", label.getLocalVisibleRect(visible))
+                                assertEquals("Slim text clipped at ${width}x$height: ${label.text}", label.height, visible.height())
+                                val layout = requireNotNull(label.layout)
+                                assertTrue("Slim text ellipsized: ${label.text}", (0 until layout.lineCount).all { layout.getEllipsisCount(it) == 0 })
+                            }
+                            bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+                            val location = IntArray(2)
+                            view.getLocationInWindow(location)
+                            PixelCopy.request(activity.window, Rect(location[0], location[1], location[0] + view.width, location[1] + view.height),
+                                bitmap, { result -> copyResult = result; copied.countDown() }, Handler(Looper.getMainLooper()))
+                        }
+                        assertTrue(copied.await(5, TimeUnit.SECONDS)); assertEquals(PixelCopy.SUCCESS, copyResult)
+                        saveDeviceScreenshot(context, name, bitmap)
+                    }
+                    awaitText("62%")
+                    awaitText("示例")
+                    scenario.onActivity { assertFalse("Only the primary quota should be shown", text(it.widgetView).contains("36%")) }
+                    capture("widget-slim-${width}x$height-$theme")
+                    runBlocking { app.settings.saveWidget(id, false, theme); app.updateWidgets() }
+                    awaitText("38%")
+                    awaitText("已用")
+                    // A second provider instance must retain its own theme and percentage preference.
+                    ActivityScenario.launch<WidgetTestHostActivity>(Intent(context, WidgetTestHostActivity::class.java)
+                        .putExtra("width", 140).putExtra("height", 150)).use { standard ->
+                        var standardId = 0
+                        standard.onActivity { standardId = it.widgetId }
+                        runBlocking {
+                            app.settings.saveWidget(standardId, true, "light"); app.updateWidgets()
+                            assertEquals(false to theme, app.settings.widgetSettings(id))
+                        }
+                        val deadline = System.currentTimeMillis() + 20_000
+                        var standardMatched = false
+                        while (!standardMatched && System.currentTimeMillis() < deadline) {
+                            instrumentation.waitForIdleSync()
+                            standard.onActivity { standardMatched = text(it.widgetView).contains("62%") }
+                            if (!standardMatched) Thread.sleep(100)
+                        }
+                        assertTrue("Both widget providers must receive shared snapshot updates", standardMatched)
+                        runBlocking { app.settings.deleteWidget(standardId) }
+                    }
+                    awaitText("38%")
+                    val states = listOf(
+                        "available" to """{"rate_limit":{"allowed":true}}""",
+                        "unreported" to """{"plan_type":"pro","rate_limit":null}""",
+                        "unknown" to """{"rate_limit":{"primary_window":{"limit_window_seconds":18000}}}""",
+                        "restricted" to """{"rate_limit":{"allowed":false,"primary_window":{"used_percent":20}}}""",
+                    )
+                    val expected = listOf("当前可用", "未提供周期额度", "暂不可用", "使用受限")
+                    states.forEachIndexed { index, (name, body) ->
+                        runBlocking { app.repository.demo(UsageParser.parse(body, "demo", 1000)); app.updateWidgets() }
+                        awaitText(expected[index])
+                        scenario.onActivity { assertFalse("Do not show a percentage for $name", text(it.widgetView).contains("%")) }
+                        capture("widget-slim-$name-${width}x$height")
+                    }
+                    runBlocking { app.repository.logout(); app.updateWidgets() }
+                    awaitText("未连接")
+                    awaitText("轻点连接账号")
+                    capture("widget-slim-logged-out-${width}x$height")
+                    runBlocking { app.settings.deleteWidget(id); app.repository.demo() }
+                }
+            }
+        } finally {
+            runBlocking { app.repository.logout(); app.reconcileSync() }
+            instrumentation.uiAutomation.dropShellPermissionIdentity()
+            shell("appwidget revokebind --package ${context.packageName} --user 0")
+        }
+    }
+
     @Test fun missingQuotaStatesRenderAcrossAllWidgetSizes() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext

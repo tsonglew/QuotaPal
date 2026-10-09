@@ -39,6 +39,7 @@ import com.tsonglew.quotapal.LoginState
 import com.tsonglew.quotapal.MainViewModel
 import com.tsonglew.quotapal.data.*
 import com.tsonglew.quotapal.widget.QuotaWidgetReceiver
+import com.tsonglew.quotapal.widget.SlimQuotaWidgetReceiver
 import java.time.Instant
 import kotlinx.coroutines.delay
 
@@ -256,7 +257,7 @@ private fun Notice(title: String, subtitle: String, icon: ImageVector) {
 private fun WidgetPage(state: AppState, prefs: PreferencesState) {
     val context = LocalContext.current
     var help by remember { mutableStateOf(false) }
-    PageTitle("留在桌面，一眼可见。", "两种布局，同一份额度。长按小组件可调整大小与显示方式。")
+    PageTitle("留在桌面，一眼可见。", "2×1 横条、紧凑与宽版布局。长按小组件可调整大小与显示方式。")
     val preview = state.snapshot ?: remember { demoSnapshot(Instant.now().epochSecond) }
     if (state.snapshot == null || state.demo) Text("布局预览 · 示例数据", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Spacer(Modifier.height(12.dp))
@@ -272,15 +273,23 @@ private fun WidgetPage(state: AppState, prefs: PreferencesState) {
         }
     }
     Spacer(Modifier.height(16.dp))
-    DetailRow(Icons.Outlined.AspectRatio, "紧凑与宽版", "从约 2×2 到 4×2，按桌面空间自适应")
+    DetailRow(Icons.Outlined.AspectRatio, "新增 2×1 横条", "只占一行，显示主要额度或账号状态；标准组件保留更多信息")
     DetailRow(Icons.Outlined.Refresh, "主动刷新", "更新时间始终可见，多个组件共享数据")
     Spacer(Modifier.height(12.dp))
+    OutlinedButton(onClick = {
+        val manager = AppWidgetManager.getInstance(context)
+        if (manager.isRequestPinAppWidgetSupported) manager.requestPinAppWidget(ComponentName(context, SlimQuotaWidgetReceiver::class.java), null, null)
+        else help = true
+    }, modifier = Modifier.fillMaxWidth().testTag("add-slim-widget-button"), contentPadding = PaddingValues(16.dp)) {
+        Icon(Icons.Outlined.Add, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("添加 2×1 紧凑组件")
+    }
+    Spacer(Modifier.height(8.dp))
     Button(onClick = {
         val manager = AppWidgetManager.getInstance(context)
         if (manager.isRequestPinAppWidgetSupported) manager.requestPinAppWidget(ComponentName(context, QuotaWidgetReceiver::class.java), null, null)
         else help = true
     }, modifier = Modifier.fillMaxWidth().testTag("add-widget-button"), contentPadding = PaddingValues(16.dp)) {
-        Icon(Icons.Outlined.Add, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("添加到桌面")
+        Icon(Icons.Outlined.Add, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("添加标准组件")
     }
     if (help) Text("长按桌面空白处 → 小组件 → QuotaPal，即可添加。", Modifier.padding(top = 12.dp), fontSize = 13.sp)
 }

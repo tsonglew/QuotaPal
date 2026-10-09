@@ -12,10 +12,13 @@ import android.util.SizeF
 import android.view.Gravity
 import android.widget.FrameLayout
 import kotlin.math.ceil
+import java.util.concurrent.atomic.AtomicInteger
 import com.tsonglew.quotapal.widget.QuotaWidgetReceiver
+import com.tsonglew.quotapal.widget.SlimQuotaWidgetReceiver
 
 /** Debug-only native host for rendering the real RemoteViews in device tests. */
 class WidgetTestHostActivity : Activity() {
+    companion object { private val hostIds = AtomicInteger(501) }
     lateinit var widgetView: AppWidgetHostView
     private lateinit var host: AppWidgetHost
     var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
@@ -34,10 +37,11 @@ class WidgetTestHostActivity : Activity() {
             if (android.os.Build.VERSION.SDK_INT >= 31)
                 putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, arrayListOf(SizeF(width.toFloat(), height.toFloat())))
         }
-        host = AppWidgetHost(this, 501)
+        host = AppWidgetHost(this, hostIds.incrementAndGet())
         widgetId = host.allocateAppWidgetId()
         val manager = AppWidgetManager.getInstance(this)
-        check(manager.bindAppWidgetIdIfAllowed(widgetId, ComponentName(this, QuotaWidgetReceiver::class.java), options))
+        val provider = if (intent.getBooleanExtra("slim", false)) SlimQuotaWidgetReceiver::class.java else QuotaWidgetReceiver::class.java
+        check(manager.bindAppWidgetIdIfAllowed(widgetId, ComponentName(this, provider), options))
         val info = manager.getAppWidgetInfo(widgetId)
         widgetView = host.createView(this, widgetId, info)
         val padding = AppWidgetHostView.getDefaultPaddingForWidget(this, info.provider, null)

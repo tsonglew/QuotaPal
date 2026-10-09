@@ -6,4 +6,5 @@
         <item name="android:colorAccent">#3185F5</item>
     </style>
     <string name="widget_description">在桌面查看 Codex 剩余额度、重置时间与最后更新时间</string>
+    <string name="slim_widget_description">2×1 横向紧凑组件，查看主要额度或账号状态与最后更新时间</string>
 </resources>

@@ -9,6 +9,8 @@ import com.tsonglew.quotapal.data.*
 import com.tsonglew.quotapal.sync.SyncScheduler
 import com.tsonglew.quotapal.widget.QuotaWidget
 import com.tsonglew.quotapal.widget.QuotaWidgetReceiver
+import com.tsonglew.quotapal.widget.SlimQuotaWidget
+import com.tsonglew.quotapal.widget.SlimQuotaWidgetReceiver
 import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.*
 
@@ -23,11 +25,14 @@ class QuotaPalApplication : Application() {
         super.onCreate()
         scope.launch { repository.initialize() }
     }
-    suspend fun updateWidgets() { QuotaWidget().updateAll(this) }
+    suspend fun updateWidgets() { QuotaWidget().updateAll(this); SlimQuotaWidget().updateAll(this) }
     suspend fun reconcileSync() {
         repository.initialize()
         val state = repository.state.value
-        val hasWidget = AppWidgetManager.getInstance(this).getAppWidgetIds(ComponentName(this, QuotaWidgetReceiver::class.java)).isNotEmpty()
+        val manager = AppWidgetManager.getInstance(this)
+        val hasWidget = listOf(QuotaWidgetReceiver::class.java, SlimQuotaWidgetReceiver::class.java).any {
+            manager.getAppWidgetIds(ComponentName(this, it)).isNotEmpty()
+        }
         if (state.connected && !state.demo && hasWidget) SyncScheduler.schedule(this, settings.read().refreshMinutes)
         else SyncScheduler.cancel(this)
     }

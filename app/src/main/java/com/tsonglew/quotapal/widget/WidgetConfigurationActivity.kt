@@ -13,7 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import androidx.glance.appwidget.updateAll
 import com.tsonglew.quotapal.quotaApp
 import com.tsonglew.quotapal.ui.QuotaTheme
 import kotlinx.coroutines.launch
@@ -46,7 +45,7 @@ class WidgetConfigurationActivity : ComponentActivity() {
                                 saving = true
                                 lifecycleScope.launch {
                                     quotaApp.settings.saveWidget(widgetId, remaining, theme)
-                                    QuotaWidget().updateAll(this@WidgetConfigurationActivity)
+                                    quotaApp.updateWidgets()
                                     setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))
                                     finish()
                                 }

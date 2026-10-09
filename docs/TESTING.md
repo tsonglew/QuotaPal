@@ -14,6 +14,7 @@
 - Android 存储：Keystore 加密往返、密文篡改拒绝、凭据删除和备份关闭；组件配置互不覆盖。
 - Android 组件：使用 debug 专用原生 AppWidgetHost，渲染真实 Glance RemoteViews，检查 140×150、280×150、140×230 dp，退出后切换到未连接状态。
 - 可选额度回归：仅周额度、无窗口且可用、未提供周期额度、用量未知、服务端受限；检查解析和缓存替换、Compose 说明及三种真实组件尺寸，确保不虚构百分比且提示与更新时间完整可见。
+- 2×1 原生组件：验证独立入口的 2×1 网格元数据，130×70、140×70、280×70 与横屏 260×50 dp；覆盖浅深色、已用／剩余、无周期、未知用量、受限和退出，逐项检查所有文字可见且不省略。与标准组件同时绑定时检查共享更新和独立设置。
 
 组件测试临时通过系统 shell 授予绑定权限，结束时撤销。测试宿主仅包含在 debug 变体中，未导出，不进入 release。实现依据 [Android widget host 文档](https://developer.android.com/develop/ui/views/appwidgets/host) 和 [AOSP appwidget shell 命令](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/cmds/appwidget/src/com/android/commands/appwidget/AppWidget.java)。宿主测试不能替代真实 Launcher、系统选择器和 OEM 验证。
 
