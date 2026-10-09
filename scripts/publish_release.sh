@@ -53,5 +53,7 @@ else
   gh release create "$RELEASE_TAG" "${release_args[@]}"
 fi
 gh release upload "$RELEASE_TAG" "$apk" artifacts/release/SHA256SUMS artifacts/release/provenance.json --clobber
-gh release edit "$RELEASE_TAG" --draft=false --notes-file artifacts/release/release-notes.md
+edit_args=(--draft=false --notes-file artifacts/release/release-notes.md)
+if [[ "$RELEASE_TAG" == *-* ]]; then edit_args+=(--prerelease); else edit_args+=(--prerelease=false); fi
+gh release edit "$RELEASE_TAG" "${edit_args[@]}"
 printf 'Published %s at commit %s\n' "$RELEASE_TAG" "$RELEASE_SHA"
