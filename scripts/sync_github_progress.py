@@ -47,7 +47,7 @@ for stage, status, evidence, next_step in rows:
     description += (f"\n\n## 当前进展\n\n2026-10-09：{evidence.strip()}。下一步：{next_step.strip()}。\n\n"
         f"[跟踪任务 #{number}](https://github.com/tsonglew/QuotaPal/issues/{number}) · "
         "[实时进度](https://github.com/tsonglew/QuotaPal/blob/codex/android-mvp/docs/PROGRESS.md) · "
-        "[验证记录](https://github.com/tsonglew/QuotaPal/blob/codex/android-mvp/docs/VALIDATION_ALPHA02.md)")
+        "[验证记录](https://github.com/tsonglew/QuotaPal/blob/codex/android-mvp/docs/VALIDATION_ALPHA03.md)")
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as output:
         json.dump({"description": description}, output, ensure_ascii=False)
         output.flush()
