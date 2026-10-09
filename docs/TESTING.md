@@ -13,6 +13,7 @@
 - Android 页面：进入示例、切换标签、深色主题、退出清理，导出浅深色截图。
 - Android 存储：Keystore 加密往返、密文篡改拒绝、凭据删除和备份关闭；组件配置互不覆盖。
 - Android 组件：使用 debug 专用原生 AppWidgetHost，渲染真实 Glance RemoteViews，检查 140×150、280×150、140×230 dp，退出后切换到未连接状态。
+- 可选额度回归：仅周额度、无窗口且可用、未提供周期额度、用量未知、服务端受限；检查解析和缓存替换、Compose 说明及三种真实组件尺寸，确保不虚构百分比且提示与更新时间完整可见。
 
 组件测试临时通过系统 shell 授予绑定权限，结束时撤销。测试宿主仅包含在 debug 变体中，未导出，不进入 release。实现依据 [Android widget host 文档](https://developer.android.com/develop/ui/views/appwidgets/host) 和 [AOSP appwidget shell 命令](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/cmds/appwidget/src/com/android/commands/appwidget/AppWidget.java)。宿主测试不能替代真实 Launcher、系统选择器和 OEM 验证。
 
@@ -33,6 +34,8 @@ CI 产物 `android-build` 含 debug APK、单元测试与 lint 报告；`android
 | 再次连接，打开 OpenAI 页 | 在系统浏览器授权，不在 App 输入密码 | 待真机 |
 | 完成设备码授权 | 自动返回可刷新额度，账号／工作区正确 | 待真机 |
 | 对照同账号官方客户端 | 窗口、百分比和重置时间相符，记录对照时刻 | 待真机 |
+| 使用无短周期窗口的账号 | 保留周等长期额度，明确提示未提供短周期额度；主界面与组件一致 | 待真机 |
+| 账号未返回任何周期窗口 | 有说明文字，不显示空卡片或虚构百分比；服务端确认可用时显示当前可用 | 待真机 |
 | 经系统选择器添加组件 | 配置可取消、保存成功后出现在桌面 | 待真机 |
 | 放置 3 个组件并缩放 | 各自主题可不同，共享同一更新时间与额度快照 | 待真机 |
 | 断网后手动刷新 | 保留上次数据与成功时间，显示失败状态 | 待真机 |
