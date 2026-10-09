@@ -20,6 +20,53 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class WidgetRenderTest {
+    @Test fun resizeDeleteAndReaddUseRealHostAndClearInstancePreferences() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val app = context.quotaApp
+        instrumentation.uiAutomation.adoptShellPermissionIdentity(android.Manifest.permission.BIND_APPWIDGET)
+        var removedId = 0
+        try {
+            runBlocking { app.repository.demo() }
+            ActivityScenario.launch<WidgetTestHostActivity>(Intent(context, WidgetTestHostActivity::class.java)
+                .putExtra("width", 280).putExtra("height", 150)).use { scenario ->
+                scenario.onActivity { removedId = it.widgetId }
+                runBlocking { app.settings.saveWidget(removedId, false, "dark"); app.updateWidgets() }
+                fun awaitQuota(expected: String, secondVisible: Boolean) {
+                    val deadline = System.currentTimeMillis() + 20_000
+                    var matched = false
+                    while (!matched && System.currentTimeMillis() < deadline) {
+                        scenario.onActivity {
+                            val actual = text(it.widgetView)
+                            matched = actual.contains(expected) && actual.contains("64%") == secondVisible
+                        }
+                        if (!matched) Thread.sleep(100)
+                    }
+                    assertTrue("Resized RemoteViews must render the requested quota layout", matched)
+                }
+                awaitQuota("38%", true)
+                scenario.onActivity { it.resizePrimaryWidget(140, 230) }
+                awaitQuota("38%", true)
+                scenario.onActivity { it.resizePrimaryWidget(140, 150) }
+                awaitQuota("38%", false)
+            }
+            val deadline = System.currentTimeMillis() + 20_000
+            while (runBlocking { app.settings.widgetSettings(removedId) } != (true to "system") &&
+                System.currentTimeMillis() < deadline) Thread.sleep(100)
+            assertEquals("Deleting a bound widget must clear its stored settings", true to "system",
+                runBlocking { app.settings.widgetSettings(removedId) })
+            ActivityScenario.launch<WidgetTestHostActivity>(Intent(context, WidgetTestHostActivity::class.java)).use { scenario ->
+                var replacementId = 0
+                scenario.onActivity { replacementId = it.widgetId }
+                assertNotEquals("Readding must allocate a fresh platform instance", removedId, replacementId)
+                assertEquals(true to "system", runBlocking { app.settings.widgetSettings(replacementId) })
+            }
+        } finally {
+            runBlocking { app.settings.deleteWidget(removedId); app.repository.logout(); app.reconcileSync() }
+            instrumentation.uiAutomation.dropShellPermissionIdentity()
+        }
+    }
+
     @Test fun slimWidgetsRenderOneRowQuotaStatesAndIndependentSettings() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext

@@ -69,6 +69,16 @@ class WidgetTestHostActivity : Activity() {
             ceil(height * density).toInt() + padding.top + padding.bottom, gravity)
     }
 
+    fun resizePrimaryWidget(width: Int, height: Int) {
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            widgetView.updateAppWidgetSize(Bundle(), listOf(SizeF(width.toFloat(), height.toFloat())))
+        } else {
+            @Suppress("DEPRECATION")
+            widgetView.updateAppWidgetSize(Bundle(), width, height, width, height)
+        }
+        widgetView.layoutParams = widgetLayout(widgetView, width, height, Gravity.CENTER)
+    }
+
     fun addStandardWidget(): Int {
         check(secondaryWidgetView == null)
         val (id, view) = bindWidget(140, 150, false)
