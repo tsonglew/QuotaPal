@@ -48,7 +48,9 @@ class QuotaWidget : GlanceAppWidget() {
         val foreground = ColorProvider(if (dark) Color(0xFFF2F3F5) else Color(0xFF17191D))
         val muted = ColorProvider(if (dark) Color(0xFFA4AAB5) else Color(0xFF747C88))
         val track = ColorProvider(if (dark) Color(0xFF282C33) else Color(0xFFE6E9EF))
-        Column(GlanceModifier.fillMaxSize().appWidgetBackground().background(background).cornerRadius(28.dp).padding(12.dp)
+        val notice = state.snapshot?.quotaNotice()
+        Column(GlanceModifier.fillMaxSize().appWidgetBackground().background(background).cornerRadius(28.dp)
+            .padding(horizontal = 12.dp, vertical = if (notice != null) 8.dp else 12.dp)
             .clickable(actionStartActivity<MainActivity>())) {
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Codex", style = TextStyle(color = foreground, fontSize = 15.sp, fontWeight = FontWeight.Medium), modifier = GlanceModifier.defaultWeight())
@@ -62,7 +64,6 @@ class QuotaWidget : GlanceAppWidget() {
                 Text(state.failure?.userMessage() ?: "轻点打开 QuotaPal", style = TextStyle(color = muted, fontSize = 11.sp))
             } else {
                 val windows = state.snapshot.windows.take(if (size.width >= 280.dp || size.height >= 230.dp) 2 else 1)
-                val notice = state.snapshot.quotaNotice()
                 if (windows.isEmpty()) {
                     Text(notice?.title ?: "未提供周期额度", style = TextStyle(color = foreground, fontSize = 16.sp, fontWeight = FontWeight.Medium), maxLines = 2)
                     Spacer(GlanceModifier.height(6.dp))
