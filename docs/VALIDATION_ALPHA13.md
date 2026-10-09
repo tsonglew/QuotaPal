@@ -35,3 +35,11 @@ CI 37998260240 全部终态，29／31／35／36（包括真实改时及真实网
 网络隔离最终版本六阶段均成功（0.258／3.579、0.309／2.953、0.306／3.327 秒）；外部复核 Wi-Fi=1、mobile_data=1、low_power=0、后台 app-op=default，均恢复原值。ShellCheck、diff 检查、20 项交付脚本测试通过。
 
 单独关闭 GLDirectMem 的本地对照也失败：模拟器 37.2.12 日志确认该 flag 已 disabled，但 API 37.0 ARM64 在任何 App 测试前约 20 秒即发生同一 SurfaceFlinger／RegionSampling 的 ReadColorBufferDma 断言，system_server 不在运行。已保存本地 crash buffer 并关闭该受控模拟器，未将无效参数提交到 CI。此证据表明旧 emulator feature 开关并不能保证当前 Gfxstream 的扩展广播已关闭，不能据当前主仓库源码推断所安装二进制的行为。
+
+## 官方上一稳定版运行环境对照
+
+官方 [发布说明](https://developer.android.com/studio/releases/emulator) 明确 37.1.11 Stable 支持 API 37 所需 Vulkan 扩展。按 [官方归档](https://developer.android.com/studio/emulator_archive) 下载 Apple Silicon 构建 15917651，SHA-256 校验为 `22530de9363f34ea945ecb5cad74523abd4b615f27f3c1a9899efb183ea9e144`，独立解压到忽略的工具目录，没有替换当前 SDK。保留原 API 37.0 ARM64 镜像、4GB RAM、software 后端及全部测试，不添加无效的直接内存开关。
+
+37.1.11 已通过实际框架稳定准备检查，启动 crash buffer 尚无同一断言；完整 18 项普通设备回归已启动，结果待定。这个对照用于确认模拟器版本与故障关系，不把开始运行当作验证通过。
+
+进一步查阅 emulator emu-master-dev 的 opengles.cpp 可见旧 feature 到 Gfxstream feature 的显式映射，因此“两套入口直接导致失效”的解释并未获得证明。已安装二进制与所阅分支之间的差异仍未知，以实际对照为准。

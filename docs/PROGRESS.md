@@ -130,3 +130,5 @@
 - 2026-10-10：alpha13 CI 37999549398 全部终态：29／31／35／36 成功，37.0 安装 Broken pipe、37.2 启动 instrumentation 后系统崩溃并伴数据库目录缺失，两组 crash buffer 均有 SurfaceFlinger ReadColorBufferDma 断言，gate 正确失败。启动边界处理不能修复系统崩溃，E06 保留；准备推送省电探针与 F06 支持说明。
 
 - 2026-10-10：c83587d 已推送，新 CI 38000382538 运行。单独关闭 GLDirectMem 的 API 37 ARM64 对照在 App 测试前复现相同 SurfaceFlinger 断言，flag 日志虽显示 disabled，实际未消除扩展问题；不提交无效配置，保留诊断证据继续定位。
+
+- 2026-10-10：核对官方归档与 API 37 支持说明，独立下载并校验 37.1.11 Stable 构建 15917651。相同 API 37 ARM64／4GB／software 配置通过框架稳定检查，启动未见原断言，完整原生 18 项套件运行中；暂未改 CI 版本，云端／16KB 证明仍缺。
