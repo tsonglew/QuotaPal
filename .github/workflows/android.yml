@@ -21,6 +21,9 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
       - name: Install compile platform
         run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
       - name: Unit tests, lint and APK
@@ -46,6 +49,9 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
       - name: Install compile platform
         run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
       - name: Enable KVM
