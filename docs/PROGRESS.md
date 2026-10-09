@@ -46,3 +46,5 @@
 - 2026-10-09：[最终实现验证](https://github.com/tsonglew/QuotaPal/actions/runs/37936883382) 全部通过：27 项单元测试、lint、APK 与测试包构建、4 项 Android 35 原生测试。复查 7 张截图，确认三种组件布局的数字、分段条和更新时间完整。M1 任务及 milestone 已完成；其余阶段保留真实授权、平台／Launcher 与长期观察的待验收项。
 
 - 2026-10-10：新增 M6 CI/CD 与 GitHub Deployments 配置，参考 magpie 固定提交。运行 [37978463336](https://github.com/tsonglew/QuotaPal/actions/runs/37978463336) 的交付检查、40 项 JVM 测试、lint、APK、API 29／31／35／36 设备矩阵及统一 CI gate 全部通过。本地标准 AOSP 35 额外通过 10 项设备测试；release lint／R8 构建通过，实际 zipalign／apksigner 临时密钥演练通过。尚未用正式密钥发布或登记实际 deployment；GitHub 写权限仍阻止创建 PR。详见 [alpha04 验证记录](VALIDATION_ALPHA04.md)。
+
+- 2026-10-10：用户反馈清理后台后不再自动更新。新增分品牌后台引导，版本推进 `0.1.0-alpha05`：自动识别与手动切换、应用信息／电池优化入口、返回后重读系统状态、强制停止后重开提示。未将其认定为已修复后台限制；H04 保留小米 Android 17 及其他 OEM 实测。调研见 [后台更新引导](BACKGROUND_GUIDE.md)。40 项 JVM 测试、lint、App／测试 APK 构建及新增页面回归通过；11 项交付工具测试通过。Android 35 全部 11 项设备测试通过，小米引导原生截图已检查，H01–H03 完成，H04 待真机验收。详见 [alpha05 验证记录](VALIDATION_ALPHA05.md)。

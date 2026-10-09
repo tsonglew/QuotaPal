@@ -320,6 +320,8 @@ private fun SettingsPage(state: AppState, prefs: PreferencesState, model: MainVi
         }
     }
     Spacer(Modifier.height(18.dp))
+    BackgroundGuide()
+    Spacer(Modifier.height(18.dp))
     Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surface) {
         Column(Modifier.fillMaxWidth().padding(20.dp)) {
             Text("Codex 连接", fontWeight = FontWeight.Medium)

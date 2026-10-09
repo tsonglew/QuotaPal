@@ -34,6 +34,21 @@ class AppFlowTest {
         compose.onNodeWithTag("connect-button").assertExists()
         screenshot("welcome-dark")
     }
+    @Test fun backgroundGuideCanSwitchBrandsAndCollapse() {
+        compose.onNodeWithTag("tab-settings").performClick()
+        compose.onNodeWithTag("background-guide-toggle").performScrollTo().performClick()
+        compose.onNodeWithTag("background-brand-picker").performScrollTo().performClick()
+        compose.onNodeWithText("小米 / Redmi / POCO").performClick()
+        compose.onNodeWithText("1. 允许自启动：", substring = true).performScrollTo().assertIsDisplayed()
+        screenshot("background-guide-xiaomi")
+        compose.onNodeWithTag("background-brand-picker").performScrollTo().performClick()
+        compose.onNodeWithText("Samsung").performClick()
+        compose.onNodeWithText("1. 排除休眠：", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("background-app-settings").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("background-guide-toggle").performScrollTo().performClick()
+        compose.onNodeWithTag("background-brand-picker").assertDoesNotExist()
+    }
+
     private fun screenshot(name: String) {
         compose.waitForIdle()
         saveDeviceScreenshot(compose.activity, name, compose.onRoot().captureToImage().asAndroidBitmap())
