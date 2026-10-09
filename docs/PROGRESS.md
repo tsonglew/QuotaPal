@@ -16,13 +16,14 @@
 ## 当前环境
 
 - 已创建原生 Android 工程、自动测试及 GitHub CI。
-- 本机有 JDK 17／23，尚无 Android SDK 或模拟器。
-- 先配置可复现构建与 GitHub CI，实机和长时间观察项目保留待验收。
+- 本机使用 JDK 17；2026-10-10 在忽略目录 `.tools/android-sdk` 安装 Android 36 SDK、Build Tools 35.0.0 和 platform-tools，尚无模拟器。
+- 本地构建已启动；实机和长时间观察项目保留待验收。
 - 已下载自用测试 APK；[验证记录](VALIDATION.md) 保存构建版本、校验和和证据，[原生截图](SCREENSHOTS.md) 保存实际渲染结果。
 
 ## 进展记录
 
 - 2026-10-10：继续 M3–M4 验证。修复系统时间回拨后未来的最近尝试／成功快照时间会持续阻止刷新的问题；增加回拨恢复与服务端 Retry-After 不被绕过两项回归。CI 扩展 API 29、31、35、36，分别保存设备证据。构建与矩阵尚待验证，不提前勾选 E05／E06；真实授权、OEM 和长期观察仍待验收。
+- 2026-10-10：修复与 checklist 已以 `a9541eb` 推送到 `codex/stability-matrix`。GitHub 集成创建 PR 返回 403（Resource not accessible by integration）；CLI 未登录，浏览器 GitHub 访问被权限策略拒绝，故尚无新 PR 或合并。进度同步脚本改为读取文档日期并引用主分支，dry-run 成功；未执行 GitHub 写入。首次本地构建因缺 SDK 失败，补齐 SDK 后重新运行，结果待记录。
 
 - 2026-10-09：实现独立 2×1 桌面组件入口与 App 添加按钮，保留主要额度／状态、刷新入口和完整更新时间，适配单行及较矮横屏布局。两种组件共用更新与后台调度，实例配置独立。版本升级为 `0.1.0-alpha03`。[验证 37953081016](https://github.com/tsonglew/QuotaPal/actions/runs/37953081016) 全部通过：36 项单元测试、lint、构建、9 项 Android 35 测试。新增组件检查 4 种尺寸、已用／剩余、5 种额度状态、退出和混合实例；修复测试宿主同时启动两个 Activity 时的生命周期问题。详情见 [alpha03 验证记录](VALIDATION_ALPHA03.md)。
 
