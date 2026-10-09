@@ -1,0 +1,130 @@
+name: Android preview deployment
+on:
+  workflow_run:
+    workflows: [Android build and tests]
+    types: [completed]
+permissions: {}
+concurrency:
+  group: android-preview-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'pull_request' || github.event.workflow_run.head_branch == 'master') &&
+      contains(fromJSON('["push","pull_request","workflow_dispatch"]'), github.event.workflow_run.event)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    outputs:
+      allowed: ${{ steps.run.outputs.allowed }}
+      sha: ${{ steps.run.outputs.sha }}
+      environment: ${{ steps.run.outputs.environment }}
+      artifact-url: ${{ steps.run.outputs.artifact-url }}
+    steps:
+      - uses: actions/github-script@v7
+        id: run
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            const pr = run.pull_requests[0];
+            if (run.event === 'pull_request') {
+              if (!pr) return;
+              const {data: current} = await github.rest.pulls.get({...context.repo, pull_number: pr.number});
+              if (current.state !== 'open' || current.head.sha !== run.head_sha ||
+                  current.head.repo.full_name !== `${context.repo.owner}/${context.repo.repo}`) return;
+            } else {
+              const {data: current} = await github.rest.repos.getBranch({...context.repo, branch: 'master'});
+              if (current.commit.sha !== run.head_sha) return;
+            }
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+              ...context.repo, run_id: run.id, per_page: 100
+            });
+            const artifact = artifacts.find(a => a.name === 'android-apk' && !a.expired);
+            if (!artifact) throw new Error('Tested APK artifact is missing or expired');
+            core.setOutput('allowed', 'true');
+            core.setOutput('sha', run.head_sha);
+            core.setOutput('environment', pr ? `android-preview/pr-${pr.number}` : 'android-preview/master');
+            core.setOutput('artifact-url', `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${run.id}/artifacts/${artifact.id}`);
+  deploy:
+    needs: prepare
+    if: needs.prepare.outputs.allowed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+      deployments: write
+    steps:
+      # No checkout or execution of PR code in this privileged workflow.
+      - uses: actions/github-script@v7
+        id: deployment
+        env:
+          SOURCE_SHA: ${{ needs.prepare.outputs.sha }}
+          ENVIRONMENT: ${{ needs.prepare.outputs.environment }}
+        with:
+          script: |
+            const response = await github.rest.repos.createDeployment({
+              ...context.repo, ref: process.env.SOURCE_SHA, auto_merge: false,
+              required_contexts: [], environment: process.env.ENVIRONMENT,
+              transient_environment: true, production_environment: false,
+              description: 'Tested Android preview APK',
+              payload: {run_id: context.payload.workflow_run.id}
+            });
+            if (!response.data.id) throw new Error('Deployment was not created');
+            core.setOutput('id', response.data.id);
+            await github.rest.repos.createDeploymentStatus({
+              ...context.repo, deployment_id: response.data.id, state: 'in_progress',
+              log_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            });
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: apk
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - name: Verify APK provenance and checksum
+        env:
+          SOURCE_SHA: ${{ needs.prepare.outputs.sha }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, re
+          from pathlib import Path
+          root = Path('apk')
+          metadata = json.loads((root / 'metadata.json').read_text())
+          source = os.environ['SOURCE_SHA']
+          assert re.fullmatch(r'[0-9a-f]{40}', source)
+          assert metadata['schema'] == 1 and metadata['source_sha'] == source
+          assert re.fullmatch(r'[0-9a-f]{40}', metadata['build_sha'])
+          assert metadata['application_id'] == 'com.tsonglew.quotapal'
+          apk = root / 'quotapal.apk'
+          assert apk.is_file() and not apk.is_symlink()
+          assert apk.read_bytes().startswith(b'PK')
+          digest = hashlib.sha256(apk.read_bytes()).hexdigest()
+          assert digest == metadata['sha256']
+          assert (root / 'SHA256SUMS').read_text() == f'{digest}  quotapal.apk\n'
+          PY
+      - name: Record deployment result
+        if: always() && steps.deployment.outputs.id != ''
+        uses: actions/github-script@v7
+        env:
+          DEPLOYMENT_ID: ${{ steps.deployment.outputs.id }}
+          RESULT: ${{ job.status }}
+          APK_URL: ${{ needs.prepare.outputs.artifact-url }}
+        with:
+          script: |
+            const success = process.env.RESULT === 'success';
+            await github.rest.repos.createDeploymentStatus({
+              ...context.repo, deployment_id: Number(process.env.DEPLOYMENT_ID),
+              state: success ? 'success' : 'failure', auto_inactive: true,
+              environment_url: process.env.APK_URL,
+              log_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              description: success ? 'APK verified; download preview artifact (14 days)' : 'APK verification or deployment failed'
+            });
+            await core.summary.addHeading('Android preview')
+              .addLink('Download tested APK artifact', process.env.APK_URL)
+              .addRaw('\n\nExperimental debug build. Artifact expires after 14 days; release builds use a separate signing key.\n')
+              .write();

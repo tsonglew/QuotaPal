@@ -12,6 +12,7 @@
 - [开发与验收 checklist](docs/DEVELOPMENT_CHECKLIST.md)
 - [GitHub milestones](https://github.com/tsonglew/QuotaPal/milestones)
 - [实时开发进度](docs/PROGRESS.md)
+- [CI/CD、预览 Deployments 与签名发布](docs/CI_CD.md)
 - [Codex 接入证据与边界](docs/CODEX_INTEGRATION.md)
 - [界面规格](docs/UI_SPEC.md)
 - [测试与自用验收](docs/TESTING.md)

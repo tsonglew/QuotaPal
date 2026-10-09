@@ -1,20 +1,51 @@
 name: Android build and tests
 on:
   push:
-    branches: [master]
+    branches: [master, 'codex/**']
   pull_request:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        default: ''
+      build-release:
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
   group: android-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 jobs:
+  delivery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache: false
+      - name: Validate workflows and delivery scripts
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          actionlint
+          shellcheck scripts/publish_release.sh scripts/device_ci.sh
+          python3 -m unittest discover -s scripts/tests -v
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+      - name: Validate delivery tooling
+        run: python3 -m unittest discover -s scripts/tests -v
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -30,6 +61,39 @@ jobs:
         run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
       - name: Unit tests, lint and APK
         run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
+      - name: Package preview APK
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          BUILD_SHA="$(git rev-parse HEAD)"
+          python3 scripts/apk_artifact.py package \
+            --apk app/build/outputs/apk/debug/app-debug.apk \
+            --output-metadata app/build/outputs/apk/debug/output-metadata.json \
+            --destination artifacts/preview --source-sha "${PR_HEAD_SHA:-$BUILD_SHA}" --build-sha "$BUILD_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: artifacts/preview/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Build unsigned release for signing job
+        if: inputs.build-release
+        run: ./gradlew lintRelease assembleRelease --stacktrace
+      - uses: actions/upload-artifact@v4
+        if: inputs.build-release
+        with:
+          name: android-release-unsigned
+          path: app/build/outputs/apk/release/
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always() && inputs.build-release
+        with:
+          name: android-release-diagnostics
+          path: |
+            app/build/outputs/mapping/release/
+            app/build/reports/lint-results-release.html
+          retention-days: 90
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -49,6 +113,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -82,3 +149,15 @@ jobs:
             screenshots/
             app/build/reports/androidTests/
           retention-days: 14
+  ci:
+    name: Android CI gate
+    needs: [delivery, build, device-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every build and device check
+        env:
+          BUILD: ${{ needs.build.result }}
+          DEVICES: ${{ needs.device-tests.result }}
+          DELIVERY: ${{ needs.delivery.result }}
+        run: test "$DELIVERY" = success && test "$BUILD" = success && test "$DEVICES" = success
