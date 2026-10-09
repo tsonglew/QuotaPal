@@ -27,3 +27,9 @@ CI 37998260240 全部终态，29／31／35／36（包括真实改时及真实网
 脚本对 adb 操作设置 90 秒上限，EXIT 恢复 forced-idle、省电、后台 app-op、模拟电池状态；仅允许初始未强制 idle／未省电／后台允许的模拟器，避免覆盖已有实验。它不会宣称五秒观察等价于长期省电验收，也不证明 Doze 内真实后台执行／延迟或 OEM 行为。E03 仍未完成，另需限制期间任务与请求次数的证据。已有 Worker 失败回归覆盖每轮最多三次尝试，但不能拿直接 Worker 调用替代系统后台调度验证。
 
 最终脚本重跑六阶段均成功：0.367／3.010、0.270／3.438、0.297／2.721 秒（分别 seed／restore）。外部复核 deep=ACTIVE、low_power=0、后台 app-op=default，电池恢复 AC 供电且未处于模拟冻结。后台受限 JobScheduler 证据出现 readyNotRestrictedInBg=false 和 WAITING；Doze 记录仍有 readyNotDozing=true，因此不能推断所有任务已受 Doze 阻挡，仍保留 E03 待办。
+
+进一步检查发现该 AOSP 模拟器 mDeepEnabled=false：此前 IDLE 状态不能证明深度 Doze 已实际作用到 JobScheduler。修正 harness 临时启用 deep、关闭屏幕，额外要求 readyNotDozing=false；后台限制也要求 readyNotRestrictedInBg=false。修正后六阶段通过（0.255／3.209、0.269／3.205、0.267／3.301 秒），原 deep=0 与 screen=true 均恢复。此结果取代此前的 Doze 调度条件证据，不抹去先前验证范围不足的记录。
+
+最终 harness 在整个合成夹具存续期禁用模拟器 Wi-Fi 与移动网络，退出时先停止 App 再恢复原网络传输状态，防止 instrumentation 结束后系统另起的普通进程绕过测试拦截器。它证明系统 Doze／后台限制条件被正确阻挡，但网络也同时被隔离，不能声称单独测出了 Doze 的延迟或限流。CI 为 API 29 增加此探针，其他版本尚待扩展。
+
+网络隔离最终版本六阶段均成功（0.258／3.579、0.309／2.953、0.306／3.327 秒）；外部复核 Wi-Fi=1、mobile_data=1、low_power=0、后台 app-op=default，均恢复原值。ShellCheck、diff 检查、20 项交付脚本测试通过。

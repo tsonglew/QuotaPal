@@ -122,3 +122,5 @@
 - 2026-10-10：两项图形内存优化开关的本地实验在 instrumentation 启动报 DeadObjectException，未证明有效，已撤回 CI 参数变更。alpha13 仅保留启动存储边界修复、无障碍测试诊断／权限恢复及准确的验证记录；Android 17 云端问题仍未完成。
 
 - 2026-10-10：alpha13 b541be9 已推送，CI 37999549398 构建／交付成功，六版本设备作业运行中。新增受控模拟器省电恢复 harness，真实 Doze／省电／后台限制切换的最终六阶段均通过，系统值已恢复；后台限制可见 JobScheduler WAITING，Doze 调度延迟仍未证明，E03 保留。更正 checklist 过时段落中仍把已验收 E05 写为未完成的问题。
+
+- 2026-10-10：省电 harness 审计发现 AOSP 默认禁用 deep，补临时启用／恢复并断言 JobScheduler readyNotDozing=false、后台限制 readyNotRestrictedInBg=false。最终网络隔离版本六阶段通过，Wi-Fi／移动数据／省电／app-op 恢复原值，20 项脚本测试与 ShellCheck 通过；接入 API 29 CI，E03 长期延迟／请求数仍待验证。

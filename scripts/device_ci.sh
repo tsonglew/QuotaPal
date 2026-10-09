@@ -13,6 +13,10 @@ if [[ "$test_result" -eq 0 ]]; then
      adb -e install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk; then
     bash scripts/lifecycle_smoke.sh && bash scripts/system_time_smoke.sh && bash scripts/network_smoke.sh
     test_result=$?
+    if [[ "$test_result" -eq 0 && "$(adb -e shell getprop ro.build.version.sdk | tr -d '\r')" == 29 ]]; then
+      bash scripts/power_smoke.sh
+      test_result=$?
+    fi
   else
     test_result=1
   fi
