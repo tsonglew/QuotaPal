@@ -18,6 +18,8 @@ import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.layout.*
 import androidx.glance.text.*
 import androidx.glance.unit.ColorProvider
+import androidx.glance.semantics.semantics
+import androidx.glance.semantics.contentDescription
 import com.tsonglew.quotapal.MainActivity
 import com.tsonglew.quotapal.data.*
 import com.tsonglew.quotapal.quotaApp
@@ -58,8 +60,9 @@ open class QuotaWidget : GlanceAppWidget() {
             .clickable(actionStartActivity<MainActivity>())) {
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Codex", style = TextStyle(color = foreground, fontSize = 15.sp, fontWeight = FontWeight.Medium), modifier = GlanceModifier.defaultWeight())
-                Text("↻", style = TextStyle(color = muted, fontSize = 20.sp), modifier = GlanceModifier.padding(horizontal = 8.dp)
-                    .clickable(actionRunCallback<RefreshWidgetAction>()))
+                Text(if (state.syncing) "…" else "↻", style = TextStyle(color = muted, fontSize = 20.sp), modifier = GlanceModifier.padding(horizontal = 8.dp)
+                    .semantics { contentDescription = "刷新额度" }
+                    .clickable(if (!state.connected && !state.demo) actionStartActivity<MainActivity>() else actionRunCallback<RefreshWidgetAction>()))
             }
             Spacer(GlanceModifier.height(8.dp))
             if (state.snapshot == null) {
@@ -85,7 +88,7 @@ open class QuotaWidget : GlanceAppWidget() {
                 }
                 Spacer(GlanceModifier.defaultWeight())
                 Text(if (state.demo) "示例数据 · ${absoluteTime(state.snapshot.fetchedAt)}" else
-                    "更新于 ${absoluteTime(state.snapshot.fetchedAt, true)}${if (state.failure != null) " · 待刷新" else ""}",
+                    "更新于 ${absoluteTime(state.snapshot.fetchedAt, true)}${if (state.failure != null) " · ${state.failure.userMessage()}" else ""}",
                     style = TextStyle(color = muted, fontSize = 10.sp), maxLines = 2)
             }
         }
@@ -134,8 +137,9 @@ open class QuotaWidget : GlanceAppWidget() {
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(if (metered) "${if (remaining) "剩余" else "已用"} · $timestamp" else timestamp,
                     style = TextStyle(color = muted, fontSize = 8.sp), modifier = GlanceModifier.defaultWeight(), maxLines = 1)
-                Text("↻", style = TextStyle(color = muted, fontSize = 14.sp), modifier = GlanceModifier.width(18.dp)
-                    .clickable(actionRunCallback<RefreshWidgetAction>()))
+                Text(if (state.syncing) "…" else "↻", style = TextStyle(color = muted, fontSize = 14.sp), modifier = GlanceModifier.width(24.dp)
+                    .semantics { contentDescription = "刷新额度" }
+                    .clickable(if (!state.connected && !state.demo) actionStartActivity<MainActivity>() else actionRunCallback<RefreshWidgetAction>()))
             }
         }
     }
@@ -182,7 +186,12 @@ class SlimQuotaWidget : QuotaWidget() {
 
 class RefreshWidgetAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: androidx.glance.action.ActionParameters) {
-        SyncScheduler.refresh(context)
+        val app = context.quotaApp
+        refreshFromWidget(
+            refresh = { app.repository.refresh(force = true) },
+            enqueue = { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { SyncScheduler.refresh(context).result.get() } },
+            update = { app.updateWidgets() },
+        )
     }
 }
 

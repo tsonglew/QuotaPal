@@ -85,8 +85,8 @@ class UsageRepository(
             if (!force && prefs.lastFailure == null && mutableState.value.snapshot?.let { now() - it.fetchedAt in 0L until prefs.refreshMinutes * 60 } == true)
                 return@withLock SyncResult.DEFERRED
             mutableState.update { it.copy(syncing = true) }
-            settings.syncResult(prefs.lastFailure, prefs.retryAt, now())
             try {
+                settings.syncResult(prefs.lastFailure, prefs.retryAt, now())
                 var active = session
                 if (active.expiresAt <= now() + 60) {
                     active = api.renew(active)
@@ -105,7 +105,14 @@ class UsageRepository(
                 settings.syncResult(null)
                 mutableState.value = AppState(true, true, snapshot)
                 SyncResult.SUCCESS
-            } catch (cancel: CancellationException) { throw cancel }
+            } catch (cancel: CancellationException) {
+                // A bounded widget attempt may hand off to a worker. An interrupted request
+                // must not look like a successful recent attempt and suppress that continuation.
+                if (ticket == generation.get()) withContext(kotlinx.coroutines.NonCancellable) {
+                    settings.syncResult(prefs.lastFailure, prefs.retryAt, prefs.lastAttemptAt)
+                }
+                throw cancel
+            }
             catch (failure: ApiFailure) {
                 if (ticket == generation.get()) {
                     settings.syncResult(failure.kind, failure.retryAt ?: 0)

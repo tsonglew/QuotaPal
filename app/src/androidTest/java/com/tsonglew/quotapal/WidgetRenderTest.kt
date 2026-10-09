@@ -52,7 +52,10 @@ class WidgetRenderTest {
                         var matched = false
                         while (!matched && System.currentTimeMillis() < deadline) {
                             instrumentation.waitForIdleSync()
-                            scenario.onActivity { matched = text(it.widgetView).contains(expected) }
+                            scenario.onActivity { activity ->
+                                matched = text(activity.widgetView).contains(expected) &&
+                                    texts(activity.widgetView).filter { it.text.isNotEmpty() }.all { it.layout != null }
+                            }
                             if (!matched) Thread.sleep(100)
                         }
                         var actual = ""
@@ -167,7 +170,10 @@ class WidgetRenderTest {
                         var matched = false
                         while (!matched && System.currentTimeMillis() < deadline) {
                             instrumentation.waitForIdleSync()
-                            scenario.onActivity { matched = text(it.widgetView).contains(expected) && text(it.widgetView).contains("示例数据") }
+                            scenario.onActivity { activity ->
+                                matched = text(activity.widgetView).contains(expected) && text(activity.widgetView).contains("示例数据") &&
+                                    texts(activity.widgetView).filter { it.text.isNotEmpty() }.all { it.layout != null }
+                            }
                             if (!matched) Thread.sleep(100)
                         }
                         assertTrue("$name widget ${width}x$height missing $expected", matched)
@@ -229,7 +235,10 @@ class WidgetRenderTest {
                         var matched = false
                         while (!matched && System.currentTimeMillis() < deadline) {
                             instrumentation.waitForIdleSync()
-                            scenario.onActivity { matched = text(it.widgetView).contains(expected) }
+                            scenario.onActivity { activity ->
+                                matched = text(activity.widgetView).contains(expected) &&
+                                    texts(activity.widgetView).filter { it.text.isNotEmpty() }.all { it.layout != null }
+                            }
                             if (!matched) Thread.sleep(100)
                         }
                         var actual = ""

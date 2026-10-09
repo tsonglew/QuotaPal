@@ -27,9 +27,16 @@ object SyncScheduler {
     fun refresh(context: Context): Operation {
         val request = OneTimeWorkRequestBuilder<UsageSyncWorker>().setInputData(workDataOf("force" to true))
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS).build()
-        return WorkManager.getInstance(context).enqueueUniqueWork(MANUAL, ExistingWorkPolicy.KEEP, request)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .apply {
+                // Older systems require a foreground notification for expedited work.
+                if (android.os.Build.VERSION.SDK_INT >= 31)
+                    setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            }.build()
+        // A new user attempt must not be hidden behind a previous retry's backoff.
+        return WorkManager.getInstance(context).enqueueUniqueWork(MANUAL, ExistingWorkPolicy.REPLACE, request)
     }
+
     fun cancel(context: Context) {
         WorkManager.getInstance(context).cancelUniqueWork(PERIODIC)
         WorkManager.getInstance(context).cancelUniqueWork(MANUAL)

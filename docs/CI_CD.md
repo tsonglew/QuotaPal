@@ -8,7 +8,7 @@
 
 | 入口 | 检查／产物 | 部署 |
 | --- | --- | --- |
-| PR、master／codex 分支 push、手动 CI | 交付脚本测试、40 项 JVM 测试、lint、debug APK；API 29／31／35／36 设备矩阵 | PR 或 master 全部通过后登记预览 deployment；codex 分支 push 仅验证 |
+| PR、master／codex 分支 push、手动 CI | 交付脚本测试、45 项 JVM 测试、lint、debug APK；API 29／31／35／36 设备矩阵 | PR 或 master 全部通过后登记预览 deployment；codex 分支 push 仅验证 |
 | `v<versionName>` tag，或在该 tag 上手动运行 Release | 验证 tag 格式、版本及主分支祖先关系；复用完整 CI；额外构建和 lint minified release | 固定密钥签名、校验证书、发布 GitHub Release；记录 `android-release` 环境 |
 
 统一状态为 `Android CI gate`，只有交付工具检查、build 与全部设备矩阵成功才会通过。交付工具检查固定 actionlint 1.7.12、运行 ShellCheck 与 Python 测试。主分支 CI 不因后续 push 取消正在运行的验证；PR 新提交可取消旧验证。发布同 tag 串行执行。

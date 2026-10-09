@@ -30,6 +30,35 @@ class UsageRepositoryTest {
         assertEquals(1, server.requestCount)
         assertEquals("88", repository.state.value.snapshot!!.windows.single().percentageLabel(true))
     }
+    @Test fun cancelledWidgetAttemptCanImmediatelyContinueWithoutReturningOldCacheAsSuccess() = runBlocking {
+        dao.record = SnapshotRecord(accountId = "test-account", json = AppJson.encodeToString(demoSnapshot(500).copy(accountId = "test-account")))
+        val readingBody = java.util.concurrent.CountDownLatch(1)
+        val client = okhttp3.OkHttpClient.Builder().retryOnConnectionFailure(false).eventListener(object : okhttp3.EventListener() {
+            override fun responseHeadersEnd(call: okhttp3.Call, response: okhttp3.Response) { readingBody.countDown() }
+        }).build()
+        repository = UsageRepository(CodexApi(client = client, usageUrl = server.url("/usage").toString(), now = { 1000 }), vault, dao, settings, now = { 1000 })
+        server.enqueue(MockResponse().setHeader("Connection", "close").setBody(body).setBodyDelay(2, TimeUnit.SECONDS))
+        val attempt = async { repository.refresh(true) }
+        // Cancel while reading an assigned response, not while the test server is still
+        // deciding which connection should receive its first queued response.
+        withContext(Dispatchers.IO) { assertTrue(readingBody.await(5, TimeUnit.SECONDS)) }
+        attempt.cancelAndJoin()
+        assertEquals(0L, settings.value.lastAttemptAt)
+        assertFalse(repository.state.value.syncing)
+        server.enqueue(MockResponse().setBody(body))
+        val continued = repository.refresh(true)
+        // OkHttp may reject a just-cancelled pooled connection before a new wire request.
+        // That must be a retryable failure, never SUCCESS with the old snapshot.
+        if (continued == SyncResult.SUCCESS) {
+            assertEquals(2, server.requestCount)
+            assertEquals(1000L, repository.state.value.snapshot!!.fetchedAt)
+        } else {
+            assertEquals(SyncResult.RETRY, continued)
+            assertEquals(FailureKind.NETWORK, repository.state.value.failure)
+            assertEquals(500L, repository.state.value.snapshot!!.fetchedAt)
+        }
+        assertEquals(1000L, settings.value.lastAttemptAt)
+    }
     @Test fun failedRequestPreservesSnapshotAndSuccessfulTimestamp() = runBlocking {
         dao.record = SnapshotRecord(accountId = "test-account", json = AppJson.encodeToString(demoSnapshot(500).copy(accountId = "test-account")))
         server.enqueue(MockResponse().setResponseCode(503))

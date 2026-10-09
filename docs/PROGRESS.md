@@ -48,3 +48,5 @@
 - 2026-10-10：新增 M6 CI/CD 与 GitHub Deployments 配置，参考 magpie 固定提交。运行 [37978463336](https://github.com/tsonglew/QuotaPal/actions/runs/37978463336) 的交付检查、40 项 JVM 测试、lint、APK、API 29／31／35／36 设备矩阵及统一 CI gate 全部通过。本地标准 AOSP 35 额外通过 10 项设备测试；release lint／R8 构建通过，实际 zipalign／apksigner 临时密钥演练通过。尚未用正式密钥发布或登记实际 deployment；GitHub 写权限仍阻止创建 PR。详见 [alpha04 验证记录](VALIDATION_ALPHA04.md)。
 
 - 2026-10-10：用户反馈清理后台后不再自动更新。新增分品牌后台引导，版本推进 `0.1.0-alpha05`：自动识别与手动切换、应用信息／电池优化入口、返回后重读系统状态、强制停止后重开提示。未将其认定为已修复后台限制；H04 保留小米 Android 17 及其他 OEM 实测。调研见 [后台更新引导](BACKGROUND_GUIDE.md)。40 项 JVM 测试、lint、App／测试 APK 构建及新增页面回归通过；11 项交付工具测试通过。Android 35 全部 11 项设备测试通过，小米引导原生截图已检查，H01–H03 完成，H04 待真机验收。详见 [alpha05 验证记录](VALIDATION_ALPHA05.md)。
+
+- 2026-10-10：用户报告小组件手动刷新不生效。定位到按钮只排入普通 WorkManager 任务，无立即获取；改为有时限的直接强制刷新，超时／临时失败再续办，Android 12+ 续办使用 expedited，新的续办不被旧任务退避挡住。修复中断请求的最近尝试时间恢复，避免续办误用旧缓存当成功；加入回归测试，版本推进 alpha06。45 项 JVM 测试、lint、App／测试 APK 构建通过；设备共 12 项覆盖通过（首轮 9 项通过，截图布局等待修正后 3 项组件回归通过；最后针对缺失额度布局与刷新回调的 2 项再次通过）。I01–I02 完成，I03 保留真机验证；详见 [alpha06 验证记录](VALIDATION_ALPHA06.md)。
