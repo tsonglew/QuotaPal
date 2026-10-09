@@ -21,8 +21,16 @@ cleanup() {
 }
 trap cleanup EXIT
 sdkmanager --install emulator "system-images;android-${DEVICE_API};${DEVICE_TARGET};x86_64"
+avd_root=$(mktemp -d "${RUNNER_TEMP:-/tmp}/quotapal-avd.XXXXXX")
+export ANDROID_USER_HOME="$avd_root"
+export ANDROID_EMULATOR_HOME="$avd_root"
+export ANDROID_AVD_HOME="$avd_root/avd"
+mkdir -p "$ANDROID_AVD_HOME"
 printf 'no\n' | avdmanager create avd --force -n quotapal-ci \
-  --package "system-images;android-${DEVICE_API};${DEVICE_TARGET};x86_64" --device pixel_6
+  --package "system-images;android-${DEVICE_API};${DEVICE_TARGET};x86_64" --device pixel_6 \
+  --path "$ANDROID_AVD_HOME/quotapal-ci.avd"
+test -s "$ANDROID_AVD_HOME/quotapal-ci.ini"
+"$ANDROID_HOME/emulator/emulator" -list-avds
 "$ANDROID_HOME/emulator/emulator" -avd quotapal-ci -no-window -no-audio -no-boot-anim \
   -no-snapshot -memory 4096 -cores 2 -gpu swiftshader_indirect > screenshots/emulator-startup.txt 2>&1 &
 emulator_pid=$!

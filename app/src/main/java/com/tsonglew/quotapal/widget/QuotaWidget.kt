@@ -131,13 +131,13 @@ open class QuotaWidget : GlanceAppWidget() {
                 Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     if (metered) {
                         Text(when { state.failure != null -> "旧"; state.demo -> "示例"; remaining -> "剩余"; else -> "已用" },
-                            style = TextStyle(color = muted, fontSize = 8.sp), modifier = GlanceModifier.defaultWeight(), maxLines = 1)
-                        Text(value, style = TextStyle(color = foreground, fontSize = if (short) 10.sp else if (value.length > 3) 10.sp else 16.sp,
+                            style = TextStyle(color = muted, fontSize = if (short) 6.sp else 7.sp), modifier = GlanceModifier.defaultWeight(), maxLines = 1)
+                        Text(value, style = TextStyle(color = foreground, fontSize = if (short) 8.sp else 10.sp,
                             fontWeight = FontWeight.Medium), maxLines = 1)
                     } else Text(value, style = TextStyle(color = foreground, fontSize = 10.sp),
                         modifier = GlanceModifier.defaultWeight(), maxLines = 1)
                     Spacer(GlanceModifier.width(4.dp))
-                    RefreshControl(state, muted, 28.dp, if (short) 10.sp else 12.sp)
+                    RefreshControl(state, muted, 28.dp, if (short) 8.sp else 10.sp)
                 }
                 Spacer(GlanceModifier.defaultWeight())
                 Text(timestamp, style = TextStyle(color = muted, fontSize = if (short) 6.sp else 8.sp), maxLines = 1)
@@ -149,13 +149,13 @@ open class QuotaWidget : GlanceAppWidget() {
                             style = TextStyle(color = foreground, fontSize = 12.sp), maxLines = 2)
                     }
                 } else if (size.width < 280.dp && windows.size > 1) {
-                    windows.forEach { LargeWindow(it, state, remaining, foreground, muted, track, dense = true) }
+                    windows.forEach { LargeWindow(it, state, remaining, foreground, muted, track) }
                 } else {
                     Row(GlanceModifier.fillMaxWidth()) {
                         windows.forEachIndexed { index, window ->
                             if (index > 0) Spacer(GlanceModifier.width(12.dp))
                             Column(GlanceModifier.defaultWeight()) {
-                                LargeWindow(window, state, remaining, foreground, muted, track, dense = false)
+                                LargeWindow(window, state, remaining, foreground, muted, track)
                             }
                         }
                     }
@@ -171,11 +171,11 @@ open class QuotaWidget : GlanceAppWidget() {
 
     @Composable
     private fun LargeWindow(window: QuotaWindow, state: AppState, remaining: Boolean, foreground: ColorProvider,
-        muted: ColorProvider, track: ColorProvider, dense: Boolean) {
+        muted: ColorProvider, track: ColorProvider) {
         val restricted = state.snapshot?.allowed == false || state.snapshot?.limitReached == true
         Column {
             Row(GlanceModifier.fillMaxWidth()) {
-                Text(window.name, style = TextStyle(color = muted, fontSize = 10.sp),
+                Text(window.name, style = TextStyle(color = muted, fontSize = 8.sp),
                     modifier = GlanceModifier.defaultWeight(), maxLines = 1)
                 if (state.demo || state.failure != null) Text(if (state.demo) "示例" else "旧",
                     style = TextStyle(color = muted, fontSize = 7.sp), maxLines = 1)
@@ -185,7 +185,7 @@ open class QuotaWidget : GlanceAppWidget() {
                 Spacer(GlanceModifier.width(4.dp))
                 Text(if (restricted) "受限" else window.percentageLabel(remaining) + if (window.usedPercent != null) "%" else "",
                     style = TextStyle(color = foreground,
-                        fontSize = if (window.usedPercent != null && !restricted) (if (dense) 18.sp else 20.sp) else 10.sp),
+                        fontSize = if (window.usedPercent != null && !restricted) 16.sp else 10.sp),
                     modifier = GlanceModifier.defaultWeight(), maxLines = 1)
             }
             if (window.usedPercent != null && !restricted) Segments(window, remaining, track, 3.dp)

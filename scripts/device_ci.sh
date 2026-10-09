@@ -3,6 +3,10 @@
 set +e
 ./gradlew connectedDebugAndroidTest --stacktrace
 test_result=$?
+if [[ "$test_result" -eq 0 ]]; then
+  bash scripts/lifecycle_smoke.sh
+  test_result=$?
+fi
 mkdir -p screenshots
 adb pull /sdcard/Pictures/QuotaPalTest/. ./screenshots/ || true
 adb shell dumpsys appwidget > screenshots/widget-host-diagnostics.txt

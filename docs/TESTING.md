@@ -7,6 +7,7 @@
 ```sh
 ./gradlew testDebugUnitTest lintDebug assembleDebug
 ./gradlew connectedDebugAndroidTest
+bash scripts/lifecycle_smoke.sh
 ```
 
 - JVM：解析单／多窗口、缺失／非法百分比、重置时间、账号隔离、HTTP 错误、退避、并发请求、续期与退出时的旧响应。
@@ -54,3 +55,9 @@ CI 产物 `android-build` 含 debug APK、单元测试与 lint 报告；设备�
 48 小时后台观察和连续 7 天自用必须实际等待完成，不能用模拟器通过替代。记录实际刷新间隔、请求次数、失败与恢复、耗电和崩溃；Doze 与系统省电下允许刷新延迟，更新时间必须真实。
 
 强制停止后，以重新打开 App 能恢复为验收条件。Pixel/AOSP、Samsung、小米 Launcher 以及最低 Android 版本仍需分别执行。公开发布前继续完成签名、升级迁移、渠道与隐私政策验收。
+
+## 外部生命周期回归
+
+`lifecycle_smoke.sh` 使用测试包的合成账号拦截器，seed 写入真实 Keystore／Room 并绑定平台组件，外部停止进程后 restore 检查缓存时间、账号、同一组件 ID／独立设置、组件重新显示和唯一周期任务。普通测试套件跳过该两阶段测试，CI 在普通套件通过后单独执行，保存 lifecycle-seed.txt／lifecycle-restore.txt；am instrument 的退出码不能证明通过，脚本还要求 OK (1 test)。
+
+仅在测试模拟器上使用 `LIFECYCLE_RESTART=reboot` 执行实际设备重启，或先装旧版 debug APK、再用 `LIFECYCLE_RESTART=upgrade LIFECYCLE_APK=/absolute/path/new.apk` 验证覆盖升级。升级断言要求版本号实际增加，不接受同版本重装作为版本迁移证明。`LIFECYCLE_OUTPUT_DIR` 可改证据目录。测试结束清除合成账号及测试组件；失败后如需恢复可重跑完整 harness。真实账号和 OEM 验证仍单独执行。

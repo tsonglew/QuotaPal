@@ -34,8 +34,11 @@ class WidgetTestHostActivity : Activity() {
         super.onCreate(savedInstanceState)
         val width = intent.getIntExtra("width", 280)
         val height = intent.getIntExtra("height", 150)
-        host = AppWidgetHost(this, hostIds.incrementAndGet())
-        val (id, view) = bindWidget(width, height, intent.getBooleanExtra("slim", false))
+        host = AppWidgetHost(this, intent.getIntExtra("hostId", hostIds.incrementAndGet()))
+        val retainedId = intent.getIntExtra("existingWidgetId", AppWidgetManager.INVALID_APPWIDGET_ID)
+        val (id, view) = if (retainedId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+            bindWidget(width, height, intent.getBooleanExtra("slim", false))
+        } else retainedId to host.createView(this, retainedId, AppWidgetManager.getInstance(this).getAppWidgetInfo(retainedId))
         widgetId = id
         widgetView = view
         root = FrameLayout(this).apply {
