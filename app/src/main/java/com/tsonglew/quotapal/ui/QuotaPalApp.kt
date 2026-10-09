@@ -39,6 +39,7 @@ import com.tsonglew.quotapal.LoginState
 import com.tsonglew.quotapal.MainViewModel
 import com.tsonglew.quotapal.data.*
 import com.tsonglew.quotapal.widget.QuotaWidgetReceiver
+import com.tsonglew.quotapal.widget.SlimQuotaWidgetReceiver
 import java.time.Instant
 import kotlinx.coroutines.delay
 
@@ -151,6 +152,7 @@ private fun Dashboard(state: AppState, prefs: PreferencesState, model: MainViewM
                     Box(Modifier.size(7.dp).clip(CircleShape).background(if (state.failure == null) Color(0xFF5A9B7C) else QuotaAmber))
                 }
                 Spacer(Modifier.height(28.dp))
+                QuotaStatusNotice(state.snapshot)
                 state.snapshot.windows.forEachIndexed { index, window ->
                     if (index > 0) { Spacer(Modifier.height(24.dp)); HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant); Spacer(Modifier.height(24.dp)) }
                     QuotaWindowCard(window, prefs.showRemaining, now = now)
@@ -181,6 +183,14 @@ private fun Dashboard(state: AppState, prefs: PreferencesState, model: MainViewM
 }
 
 @Composable
+fun QuotaStatusNotice(snapshot: UsageSnapshot) {
+    snapshot.quotaNotice()?.let { notice ->
+        Notice(notice.title, notice.description, Icons.Outlined.Info)
+        if (snapshot.windows.isNotEmpty()) Spacer(Modifier.height(20.dp))
+    }
+}
+
+@Composable
 fun QuotaWindowCard(window: QuotaWindow, remaining: Boolean, compact: Boolean = false, now: Long = Instant.now().epochSecond) {
     val value = window.displayedPercent(remaining)
     Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
@@ -190,15 +200,20 @@ fun QuotaWindowCard(window: QuotaWindow, remaining: Boolean, compact: Boolean = 
             Text(resetLabel(window, now), fontSize = if (compact) 10.sp else 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(window.percentageLabel(remaining), fontFamily = FontFamily.Monospace, fontSize = if (compact) 32.sp else 46.sp,
-                fontWeight = FontWeight.Normal, letterSpacing = (-2).sp)
+            Text(window.percentageLabel(remaining), fontFamily = if (value == null) FontFamily.Default else FontFamily.Monospace,
+                fontSize = if (value == null) 16.sp else if (compact) 32.sp else 46.sp,
+                fontWeight = FontWeight.Normal, letterSpacing = if (value == null) 0.sp else (-2).sp)
             Text(if (value == null) "" else "%", fontSize = 15.sp, modifier = Modifier.padding(bottom = 7.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
     Spacer(Modifier.height(12.dp))
-    SegmentedBar(value, "${window.name}，${if (remaining) "剩余" else "已用"} ${if (value == null) "暂不可用" else "${window.percentageLabel(remaining)}%"}")
-    Spacer(Modifier.height(6.dp))
-    Text(if (remaining) "剩余额度" else "已用额度", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    if (value == null) {
+        Text("服务暂未提供有效的用量数据，请稍后刷新。", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    } else {
+        SegmentedBar(value, "${window.name}，${if (remaining) "剩余" else "已用"} ${window.percentageLabel(remaining)}%")
+        Spacer(Modifier.height(6.dp))
+        Text(if (remaining) "剩余额度" else "已用额度", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 @Composable
@@ -242,7 +257,7 @@ private fun Notice(title: String, subtitle: String, icon: ImageVector) {
 private fun WidgetPage(state: AppState, prefs: PreferencesState) {
     val context = LocalContext.current
     var help by remember { mutableStateOf(false) }
-    PageTitle("留在桌面，一眼可见。", "两种布局，同一份额度。长按小组件可调整大小与显示方式。")
+    PageTitle("留在桌面，一眼可见。", "2×1 横条、紧凑与宽版布局。长按小组件可调整大小与显示方式。")
     val preview = state.snapshot ?: remember { demoSnapshot(Instant.now().epochSecond) }
     if (state.snapshot == null || state.demo) Text("布局预览 · 示例数据", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Spacer(Modifier.height(12.dp))
@@ -250,6 +265,7 @@ private fun WidgetPage(state: AppState, prefs: PreferencesState) {
         Column(Modifier.fillMaxWidth().padding(22.dp)) {
             Row { Text("Codex", fontWeight = FontWeight.SemiBold); Spacer(Modifier.weight(1f)); Text("${absoluteTime(preview.fetchedAt)}", fontSize = 11.sp) }
             Spacer(Modifier.height(20.dp))
+            QuotaStatusNotice(preview)
             preview.windows.take(2).forEachIndexed { i, window ->
                 if (i > 0) Spacer(Modifier.height(18.dp))
                 QuotaWindowCard(window, prefs.showRemaining, compact = true)
@@ -257,15 +273,23 @@ private fun WidgetPage(state: AppState, prefs: PreferencesState) {
         }
     }
     Spacer(Modifier.height(16.dp))
-    DetailRow(Icons.Outlined.AspectRatio, "紧凑与宽版", "从约 2×2 到 4×2，按桌面空间自适应")
+    DetailRow(Icons.Outlined.AspectRatio, "新增 2×1 横条", "只占一行，显示主要额度或账号状态；标准组件保留更多信息")
     DetailRow(Icons.Outlined.Refresh, "主动刷新", "更新时间始终可见，多个组件共享数据")
     Spacer(Modifier.height(12.dp))
+    OutlinedButton(onClick = {
+        val manager = AppWidgetManager.getInstance(context)
+        if (manager.isRequestPinAppWidgetSupported) manager.requestPinAppWidget(ComponentName(context, SlimQuotaWidgetReceiver::class.java), null, null)
+        else help = true
+    }, modifier = Modifier.fillMaxWidth().testTag("add-slim-widget-button"), contentPadding = PaddingValues(16.dp)) {
+        Icon(Icons.Outlined.Add, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("添加 2×1 紧凑组件")
+    }
+    Spacer(Modifier.height(8.dp))
     Button(onClick = {
         val manager = AppWidgetManager.getInstance(context)
         if (manager.isRequestPinAppWidgetSupported) manager.requestPinAppWidget(ComponentName(context, QuotaWidgetReceiver::class.java), null, null)
         else help = true
     }, modifier = Modifier.fillMaxWidth().testTag("add-widget-button"), contentPadding = PaddingValues(16.dp)) {
-        Icon(Icons.Outlined.Add, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("添加到桌面")
+        Icon(Icons.Outlined.Add, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("添加标准组件")
     }
     if (help) Text("长按桌面空白处 → 小组件 → QuotaPal，即可添加。", Modifier.padding(top = 12.dp), fontSize = 13.sp)
 }
@@ -307,7 +331,7 @@ private fun SettingsPage(state: AppState, prefs: PreferencesState, model: MainVi
         }
     }
     Spacer(Modifier.height(24.dp))
-    Text("QuotaPal 0.1.0 alpha\n独立第三方工具 · 连接能力处于实验阶段\n应用仅获取额度；登录凭据的权限可能覆盖更多能力。", fontSize = 11.sp,
+    Text("QuotaPal ${com.tsonglew.quotapal.BuildConfig.VERSION_NAME}\n独立第三方工具 · 连接能力处于实验阶段\n应用仅获取额度；登录凭据的权限可能覆盖更多能力。", fontSize = 11.sp,
         lineHeight = 19.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
     if (confirmLogout) AlertDialog(onDismissRequest = { confirmLogout = false }, title = { Text("清除本机连接？") },
         text = { Text("本机凭据、额度缓存与后台任务将被清除，桌面小组件恢复为未连接。远程授权不会在此操作中撤销。") },

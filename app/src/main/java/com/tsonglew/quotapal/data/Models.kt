@@ -18,7 +18,7 @@ data class QuotaWindow(
     val resetsAt: Long?,
 ) {
     fun displayedPercent(remaining: Boolean): Double? = usedPercent?.let { if (remaining) 100 - it else it }
-    fun percentageLabel(remaining: Boolean): String = displayedPercent(remaining)?.let { String.format(Locale.ROOT, "%.0f", it) } ?: "—"
+    fun percentageLabel(remaining: Boolean): String = displayedPercent(remaining)?.let { String.format(Locale.ROOT, "%.0f", it) } ?: "暂不可用"
 }
 
 @Serializable
@@ -28,7 +28,22 @@ data class UsageSnapshot(
     val windows: List<QuotaWindow>,
     val fetchedAt: Long,
     val resetCredits: Int? = null,
-)
+    val allowed: Boolean? = null,
+    val limitReached: Boolean? = null,
+) {
+    fun quotaNotice(): QuotaNotice? {
+        val mainWindows = windows.filter { it.id.startsWith("codex:") || it.id.startsWith("demo:") }
+        return when {
+            limitReached == true || allowed == false -> QuotaNotice("当前使用受限", "服务端暂不允许使用 Codex，请以账号实际权益与限制为准。", "当前使用受限")
+            mainWindows.isEmpty() && allowed == true -> QuotaNotice("当前可用", "账号未提供周期额度，无需显示百分比。实际使用仍以账号权益为准。", "未提供周期额度")
+            mainWindows.isEmpty() -> QuotaNotice("未提供周期额度", "当前账号未返回按周期计算的额度，请以账号实际权益为准。", "未提供周期额度")
+            mainWindows.all { (it.durationSeconds ?: 0) >= 86400 } -> QuotaNotice("未提供短周期额度", "当前账号未提供按小时计算的额度；已返回的长期额度仍正常显示。", "无短周期数据")
+            else -> null
+        }
+    }
+}
+
+data class QuotaNotice(val title: String, val description: String, val widgetLabel: String)
 
 @Serializable
 data class Session(
@@ -57,15 +72,22 @@ fun FailureKind.userMessage(): String = when (this) {
 fun JsonObject.obj(key: String): JsonObject? = this[key] as? JsonObject
 fun JsonObject.str(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
 fun JsonObject.long(key: String): Long? = (this[key] as? JsonPrimitive)?.longOrNull
+fun JsonObject.bool(key: String): Boolean? = (this[key] as? JsonPrimitive)?.booleanOrNull
 
 object UsageParser {
     fun parse(raw: String, accountId: String, now: Long): UsageSnapshot {
         val root = try { AppJson.parseToJsonElement(raw).jsonObject } catch (_: Exception) { throw ApiFailure(FailureKind.PROTOCOL) }
         val returnedId = root.str("account_id")
         if (returnedId != null && returnedId != accountId) throw ApiFailure(FailureKind.FORBIDDEN)
+        val mainBucket = root.obj("rate_limit")
+        if (root["rate_limit"] != null && root["rate_limit"] != JsonNull && mainBucket == null)
+            throw ApiFailure(FailureKind.PROTOCOL)
         val windows = mutableListOf<QuotaWindow>()
         fun addBucket(bucket: JsonObject?, prefix: String, label: String? = null) {
             listOf("primary_window", "secondary_window").forEach { key ->
+                val element = bucket?.get(key)
+                if (element != null && element != JsonNull && element !is JsonObject)
+                    throw ApiFailure(FailureKind.PROTOCOL)
                 val window = bucket?.obj(key) ?: return@forEach
                 val used = (window["used_percent"] as? JsonPrimitive)?.doubleOrNull?.takeIf { it.isFinite() && it in 0.0..100.0 }
                 val duration = window.long("limit_window_seconds")?.takeIf { it > 0 }
@@ -79,14 +101,18 @@ object UsageParser {
                     window.long("reset_at")?.takeIf { it > 0 } ?: window.long("reset_after_seconds")?.takeIf { it >= 0 }?.let { now + it })
             }
         }
-        addBucket(root.obj("rate_limit"), "codex")
+        addBucket(mainBucket, "codex")
         (root["additional_rate_limits"] as? JsonArray)?.forEachIndexed { index, item ->
             val extra = item as? JsonObject ?: return@forEachIndexed
             addBucket(extra.obj("rate_limit"), extra.str("metered_feature") ?: "extra-$index", extra.str("limit_name"))
         }
-        if (windows.isEmpty()) throw ApiFailure(FailureKind.PROTOCOL)
+        // Optional windows may legitimately be absent. A missing/malformed payload is still a failure.
+        val knownEmptyQuota = mainBucket?.bool("allowed") != null || mainBucket?.bool("limit_reached") != null ||
+            (root.containsKey("rate_limit") && !root.str("plan_type").isNullOrBlank())
+        if (windows.isEmpty() && !knownEmptyQuota) throw ApiFailure(FailureKind.PROTOCOL)
         return UsageSnapshot(accountId, root.str("plan_type"), windows.sortedByDescending { it.durationSeconds ?: 0 }, now,
-            root.obj("rate_limit_reset_credits")?.long("available_count")?.takeIf { it >= 0 && it <= Int.MAX_VALUE }?.toInt())
+            root.obj("rate_limit_reset_credits")?.long("available_count")?.takeIf { it >= 0 && it <= Int.MAX_VALUE }?.toInt(),
+            mainBucket?.bool("allowed"), mainBucket?.bool("limit_reached"))
     }
 }
 

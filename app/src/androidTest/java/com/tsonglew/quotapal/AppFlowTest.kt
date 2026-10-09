@@ -18,6 +18,7 @@ class AppFlowTest {
         screenshot("quota-light")
         compose.onNodeWithTag("tab-widgets").performClick()
         compose.onNodeWithTag("add-widget-button").assertExists()
+        compose.onNodeWithTag("add-slim-widget-button").assertExists()
         screenshot("widgets-light")
         compose.onNodeWithTag("tab-settings").performClick()
         compose.onNodeWithTag("theme-dark").performClick()

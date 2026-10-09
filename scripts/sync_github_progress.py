@@ -27,7 +27,7 @@ for stage, status, evidence, next_step in rows:
     body = re.sub(r"- \[[ x]\] \*\*([A-F]\d\d)\*\*", lambda match:
                   f"- [{states.get(match[1], ' ')}] **{match[1]}**", body)
     note = (f"## 当前进度\n\n2026-10-09：{evidence.strip()}。下一步：{next_step.strip()}。\n\n"
-            "实现与验证见 https://github.com/tsonglew/QuotaPal/pull/7 。\n\n")
+            "实现与验证见 https://github.com/tsonglew/QuotaPal/pull/8 。\n\n")
     body = re.sub(r"## 当前进度\n.*?(?=完整计划)", note, body, flags=re.S)
     with tempfile.NamedTemporaryFile(mode="w", suffix=".md") as output:
         output.write(body)
@@ -47,7 +47,7 @@ for stage, status, evidence, next_step in rows:
     description += (f"\n\n## 当前进展\n\n2026-10-09：{evidence.strip()}。下一步：{next_step.strip()}。\n\n"
         f"[跟踪任务 #{number}](https://github.com/tsonglew/QuotaPal/issues/{number}) · "
         "[实时进度](https://github.com/tsonglew/QuotaPal/blob/codex/android-mvp/docs/PROGRESS.md) · "
-        "[验证记录](https://github.com/tsonglew/QuotaPal/blob/codex/android-mvp/docs/VALIDATION.md)")
+        "[验证记录](https://github.com/tsonglew/QuotaPal/blob/codex/android-mvp/docs/VALIDATION_ALPHA03.md)")
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as output:
         json.dump({"description": description}, output, ensure_ascii=False)
         output.flush()

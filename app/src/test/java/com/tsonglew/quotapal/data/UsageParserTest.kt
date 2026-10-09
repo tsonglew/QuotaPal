@@ -18,7 +18,56 @@ class UsageParserTest {
         assertEquals("5 小时额度", data.windows.last().name)
     }
     @Test fun missingPercentageStaysUnknown() {
-        assertNull(parse("""{"rate_limit":{"primary_window":{"limit_window_seconds":900}}}""").windows.single().usedPercent)
+        val window = parse("""{"rate_limit":{"primary_window":{"limit_window_seconds":900}}}""").windows.single()
+        assertNull(window.usedPercent)
+        assertEquals("暂不可用", window.percentageLabel(true))
+        assertEquals("暂不可用", window.percentageLabel(false))
+    }
+    @Test fun weeklyOnlyAccountGetsAnExplanationWithoutInventingShortWindow() {
+        val data = parse("""{"plan_type":"pro","rate_limit":{"primary_window":null,"secondary_window":{"used_percent":38,"limit_window_seconds":604800}}}""")
+        assertEquals(1, data.windows.size)
+        assertEquals("62", data.windows.single().percentageLabel(true))
+        assertEquals("未提供短周期额度", data.quotaNotice()!!.title)
+    }
+    @Test fun explicitlyAllowedAccountWithoutWindowsIsASuccess() {
+        val data = parse("""{"plan_type":"pro","rate_limit":{"allowed":true,"limit_reached":false,"primary_window":null,"secondary_window":null}}""")
+        assertTrue(data.windows.isEmpty())
+        assertEquals("当前可用", data.quotaNotice()!!.title)
+        assertEquals(1000L, data.fetchedAt)
+    }
+    @Test fun nullQuotaDoesNotMeanUnlimitedOrAllowed() {
+        val data = parse("""{"plan_type":"pro","rate_limit":null,"credits":{"unlimited":true}}""")
+        assertTrue(data.windows.isEmpty())
+        assertNull(data.allowed)
+        assertEquals("未提供周期额度", data.quotaNotice()!!.title)
+    }
+    @Test fun planAloneCannotDetermineQuotaState() {
+        val data = parse("""{"plan_type":"pro","rate_limit":{"primary_window":{"used_percent":75,"limit_window_seconds":18000}}}""")
+        assertNull(data.quotaNotice())
+        assertEquals("25", data.windows.single().percentageLabel(true))
+    }
+    @Test fun blockedAccountWithoutWindowsStillShowsRestriction() {
+        for (flags in listOf("\"allowed\":false", "\"allowed\":true,\"limit_reached\":true")) {
+            val data = parse("""{"rate_limit":{$flags}}""")
+            assertEquals("当前使用受限", data.quotaNotice()!!.title)
+        }
+    }
+    @Test fun additionalLimitDoesNotHideMissingMainQuota() {
+        val data = parse("""{"rate_limit":null,"additional_rate_limits":[{"metered_feature":"review","rate_limit":{"primary_window":{"used_percent":20,"limit_window_seconds":18000}}}]}""")
+        assertEquals(1, data.windows.size)
+        assertEquals("未提供周期额度", data.quotaNotice()!!.title)
+    }
+    @Test fun unknownWindowDurationDoesNotImplyShortCycleIsAbsent() {
+        val data = parse("""{"rate_limit":{"primary_window":{"used_percent":20}}}""")
+        assertNull(data.quotaNotice())
+    }
+    @Test fun windowlessSnapshotSurvivesStorageAndOldCacheRemainsReadable() {
+        val data = parse("""{"rate_limit":{"allowed":true}}""")
+        val restored = AppJson.decodeFromString<UsageSnapshot>(kotlinx.serialization.json.Json.encodeToString(UsageSnapshot.serializer(), data))
+        assertEquals(data, restored)
+        val legacy = AppJson.decodeFromString<UsageSnapshot>("""{"accountId":"test-account","plan":"pro","windows":[],"fetchedAt":1000}""")
+        assertNull(legacy.allowed)
+        assertEquals("未提供周期额度", legacy.quotaNotice()!!.title)
     }
     @Test fun zeroAndFullUsageArePreserved() {
         val data = parse("""{"rate_limit":{"primary_window":{"used_percent":0},"secondary_window":{"used_percent":100}}}""")
@@ -47,7 +96,8 @@ class UsageParserTest {
         catch (error: ApiFailure) { assertEquals(FailureKind.FORBIDDEN, error.kind) }
     }
     @Test fun emptyOrMalformedResponseIsExplicitFailure() {
-        for (body in listOf("{}", "null", "<html>")) {
+        for (body in listOf("{}", "null", "<html>", """{"plan_type":"pro"}""", """{"rate_limit":{}}""",
+            """{"plan_type":"pro","rate_limit":false}""", """{"plan_type":"pro","rate_limit":{"primary_window":[]}}""")) {
             try { parse(body); fail() } catch (error: ApiFailure) { assertEquals(FailureKind.PROTOCOL, error.kind) }
         }
     }
