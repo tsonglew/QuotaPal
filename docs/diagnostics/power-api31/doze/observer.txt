@@ -1,0 +1,13 @@
+baseline {"time": 1791627505.7395241, "state": {"challenges": 1, "polls": 1, "exchanges": 1, "renewals": 0, "usage": 1, "rejected": 0, "blocked": 0, "used": 38, "requireRenewal": false}, "work": [{"id": "8ef801ab-378d-4a9e-82aa-70ab802ebcbd", "state": 0, "interval_duration": 900000, "last_enqueue_time": 1791627447196, "period_count": 1, "run_attempt_count": 0}], "validated": true, "idle": "ACTIVE"}
+doze-start {"time": 1791627507.813501, "state": {"challenges": 1, "polls": 1, "exchanges": 1, "renewals": 0, "usage": 1, "rejected": 0, "blocked": 0, "used": 38, "requireRenewal": false}, "work": [{"id": "8ef801ab-378d-4a9e-82aa-70ab802ebcbd", "state": 0, "interval_duration": 900000, "last_enqueue_time": 1791627447196, "period_count": 1, "run_attempt_count": 0}], "validated": true, "idle": "IDLE"}
+observed 120 seconds; no requests
+observed 240 seconds; no requests
+observed 360 seconds; no requests
+observed 480 seconds; no requests
+observed 600 seconds; no requests
+observed 720 seconds; no requests
+observed 840 seconds; no requests
+observed 960 seconds; no requests
+doze-due {"time": 1791628483.1318982, "state": {"challenges": 1, "polls": 1, "exchanges": 1, "renewals": 0, "usage": 1, "rejected": 0, "blocked": 0, "used": 38, "requireRenewal": false}, "work": [{"id": "8ef801ab-378d-4a9e-82aa-70ab802ebcbd", "state": 0, "interval_duration": 900000, "last_enqueue_time": 1791627447196, "period_count": 1, "run_attempt_count": 0}], "validated": true, "idle": "IDLE"}
+recovered {"time": 1791628494.6600661, "state": {"challenges": 1, "polls": 1, "exchanges": 1, "renewals": 0, "usage": 2, "rejected": 0, "blocked": 0, "used": 38, "requireRenewal": false}, "work": [{"id": "8ef801ab-378d-4a9e-82aa-70ab802ebcbd", "state": 0, "interval_duration": 900000, "last_enqueue_time": 1791628489502, "period_count": 2, "run_attempt_count": 0}], "validated": true, "idle": "ACTIVE"}
+PASS: real periodic work delayed by Doze and recovered without opening app

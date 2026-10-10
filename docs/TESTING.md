@@ -119,7 +119,7 @@ master f5edf96 的 [38034462993](https://github.com/tsonglew/QuotaPal/actions/ru
 4. 外部记录服务请求计数、只读数据库副本、唯一 WorkSpec 的周期／入队时间／尝试次数、JobScheduler 约束和网络状态。限制期间实际等待完整周期，不能修改时钟、数据库或强制执行 job。解除限制后等待系统自行启动刷新，核对原任务、成功缓存时间和组件恢复。
 5. 结束时恢复系统限制、原 hosts，移除临时 CA 与 adb reverse，并清除模拟器中的合成账号。对 writable-system 镜像重启复核恢复结果，再关闭模拟器，避免旧映射在下次启动重新出现。
 
-2026-10-10：直接 TLS 下正式 alpha16 已完成实际连接和额度读取，默认网络保持 VALIDATED；协议测试覆盖认证／401 续期／读取、共享计数、未知域名及控制路由拒绝、CA 信任。完整周期观察仍在运行，以上准备成功不代表 E03 已通过。
+2026-10-10：直接 TLS 下正式 alpha16 已完成实际连接和额度读取，默认网络保持 VALIDATED；协议测试覆盖认证／401 续期／读取、共享计数、未知域名及控制路由拒绝、CA 信任。随后外部 Doze 观察实际通过，详见下方证据；系统省电与后台受限仍待独立验收，E03 保持未完成。
 
 `scripts/background_power_probe.py` 将上述观察整理为外部脚本，当前解析器限 API 31。准备好专用模拟器和合成账号后，每次选择 `doze`、`saver` 或 `restricted` 中一个模式，提供明确的 adb 路径、serial、AVD 名称与新输出目录。例如：
 
@@ -133,3 +133,9 @@ python3 scripts/background_power_probe.py \
 脚本拒绝已有 Doze／省电／后台限制、非 loopback 的协议域名、缺少 TLS reverse、真实账号缓存或非 15 分钟唯一周期；每个模式实际等待 16 分钟，保留网络，每 30 秒检查请求上限。Doze／后台受限要求零请求及缓存时间不变，系统省电允许正常周期请求但禁止请求激增；解除限制后要求自动得到更新的成功缓存并保留任务和组件。输出只保存所需数据库元数据，临时数据库副本自动删除。系统限制在 finally 恢复，APK／临时 CA／hosts 等实验环境仍须按上述流程单独清理。
 
 该脚本已通过五项网络／hosts／组件解析及恢复失败回归，全部 35 项脚本测试成功；实际并发实验拒绝检查及运行中模拟器的只读快照核对通过。基线与最终 crash buffer、退出原因和最近 ANR 原文单独保存，需要核对是否出现 QuotaPal 新增异常，不能把请求／缓存断言成功当作无崩溃证明。三个模式的完整运行尚未验收，不能据此勾选 E03。
+
+### API 31 外部 Doze 实测
+
+正式 alpha16（源 `6ac605a`，完整 APK 哈希和证书见 [汇总](diagnostics/power-api31/doze/summary.json)）在专用模拟器、合成账号、直接 TLS 下完成约 977 秒观察。后台进程通过 `am kill` 回收，保持有效默认网络；任务周期 900,000 ms、首次周期已结束，到期后 JobScheduler 仍显示 `readyNotDozing=false`，新增请求为零，成功缓存时间保持不变。解除 Doze 后未打开 App 或强制调度，原 WorkSpec 自行运行一次，period_count 从 1 增至 2，请求数 1→2，缓存 fetchedAt 从 1791627337 更新为 1791628489。
+
+[观察原文](diagnostics/power-api31/doze/observer.txt)、[到期快照](diagnostics/power-api31/doze/doze-due.json)、[约束](diagnostics/power-api31/doze/doze-due-constraints.txt)、[恢复快照](diagnostics/power-api31/doze/recovered.json) 均保留。恢复后桌面仍为剩余 62%，[实际截图](diagnostics/power-api31/doze/recovered-widget.png) 的更新时间为 18:34；crash buffer 为空，系统 lastanr 显示本次启动无 ANR，退出记录为实验的 kill background。此项仅证明该正式包、API 31、单次真实周期的 Doze 延迟与恢复，不替代其余省电模式、真实账号、OEM 或长期观察。

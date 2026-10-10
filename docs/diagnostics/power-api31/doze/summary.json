@@ -1,0 +1,22 @@
+{
+  "apk": {
+    "stage": "verified",
+    "run": "38040443156",
+    "source_sha": "6ac605a8cb15c3745684bd5763668018e517f858",
+    "apk": "QuotaPal-0.1.0-alpha16.apk",
+    "sha256": "f6e47424f12f415d9025299351c0d8ade9f5b195b83f95bb0da65f16a0e6ab70",
+    "signing_cert_sha256": "5e7980c122100ccf9799a5174cb0e5a1748b8c442c09c015e145003145d2b5d4",
+    "version_code": 16
+  },
+  "api": 31,
+  "avd": "quotapal-release-upgrade-31",
+  "fixture": "synthetic account, direct TLS over adb reverse; global proxy disabled",
+  "observer_exit_code": 0,
+  "observed_seconds": 977.3923740386963,
+  "cache_preserved_during_doze": true,
+  "cache_advanced_on_recovery": true,
+  "new_requests_during_doze": 0,
+  "new_requests_on_recovery": 1,
+  "widget_time_after_recovery": "10/10 18:34",
+  "limits": "One API 31 cycle with a synthetic account; saver, background restriction, OEM and long-term validation separate."
+}

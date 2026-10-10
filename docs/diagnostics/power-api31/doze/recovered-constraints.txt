@@ -1,0 +1,44 @@
+  JOB #u0a146/2: c2b9659 com.tsonglew.quotapal/androidx.work.impl.background.systemjob.SystemJobService
+    Required constraints: CHARGING TIMING_DELAY [0x80000001]
+    Satisfied constraints: CHARGING BATTERY_NOT_LOW DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x3400003]
+    Unsatisfied constraints: TIMING_DELAY [0x80000000]
+      readyNotDozing: true
+      readyNotRestrictedInBg: true
+    Ready: false (job=false user=true !restricted=true !pending=true !active=true !backingup=true comp=true)
+  JOB #u0a146/4: 8e1fbd0 com.tsonglew.quotapal/androidx.work.impl.background.systemjob.SystemJobService
+    Required constraints:
+    Satisfied constraints: DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x3400000]
+    Unsatisfied constraints:
+      readyNotDozing: true
+      readyNotRestrictedInBg: true
+    Ready: false (job=true user=true !restricted=true !pending=true !active=false !backingup=true comp=true)
+  JOB #u0a146/5: 1cbbe0b com.tsonglew.quotapal/androidx.work.impl.background.systemjob.SystemJobService
+    Required constraints: TIMING_DELAY CONNECTIVITY [0x90000000]
+    Satisfied constraints: CONNECTIVITY DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x13400000]
+    Unsatisfied constraints: TIMING_DELAY [0x80000000]
+      readyNotDozing: true
+      readyNotRestrictedInBg: true
+    Ready: false (job=false user=true !restricted=true !pending=true !active=true !backingup=true comp=true)
+      Required constraints:
+        readyNotDozing: true
+        readyNotRestrictedInBg: true
+      Required constraints: CONNECTIVITY [0x10000000]
+      Satisfied constraints: CONNECTIVITY DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x13400000]
+      Unsatisfied constraints:
+        readyNotDozing: true
+        readyNotRestrictedInBg: true
+      Required constraints: TIMING_DELAY CONNECTIVITY [0x90000000]
+      Satisfied constraints: TIMING_DELAY CONNECTIVITY DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x93400000]
+      Unsatisfied constraints:
+        readyNotDozing: true
+        readyNotRestrictedInBg: true
+      Required constraints:
+      Satisfied constraints: DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x3400000]
+      Unsatisfied constraints:
+        readyNotDozing: true
+        readyNotRestrictedInBg: true
+      Required constraints: CONNECTIVITY [0x10000000]
+      Satisfied constraints: CONNECTIVITY DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x13400000]
+      Unsatisfied constraints:
+        readyNotDozing: true
+        readyNotRestrictedInBg: true
