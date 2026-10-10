@@ -1,0 +1,10 @@
+Synthetic account and APK removed
+<workspace>/.tools/power-lab/original-hosts: 1 file pushed, 0 skipped. 0.0 MB/s (56 bytes in 0.034s)
+SELinux: Loaded file_contexts
+Android framework services ready
+Reboot verified: pristine hosts, lab CA absent, APK absent, reverse removed, proxy off
+Owned fixture stopped and disposable private keys deleted
+OK: killing emulator, bye bye
+OK
+
+PASS: power lab cleanup verified

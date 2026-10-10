@@ -158,4 +158,12 @@ alpha17 本地验证：71 项 JVM 测试、lint 和构建通过；完整 AppFlow
 
 修正后的完整重跑通过（[汇总](diagnostics/power-api31/restricted/summary.json)、[原文](diagnostics/power-api31/restricted/observer.txt)）：约 974 秒限制期间零新增请求，默认网络持续 VALIDATED，成功缓存时间及组件 ID 不变。恢复 allow 后，原周期任务自动请求一次，period_count 从 3 增至 4，fetchedAt 从 1791629798 更新为 1791630946；组件显示更新于 19:15，crash buffer 为空、系统无 ANR。未打开 App 或强制执行 job。
 
-[组件截图](diagnostics/power-api31/restricted/recovered-widget.png) 采集时下一轮省电观察已经开始，因此只作为恢复后组件时间的证据，系统限制状态以各阶段快照／JobScheduler 记录为准。首轮 default 恢复失败及第一次重跑的进程前置失败继续保留，不替换成成功结果。系统省电完整周期仍在运行，E03 尚未勾选。
+[组件截图](diagnostics/power-api31/restricted/recovered-widget.png) 采集时下一轮省电观察已经开始，因此只作为恢复后组件时间的证据，系统限制状态以各阶段快照／JobScheduler 记录为准。首轮 default 恢复失败及第一次重跑的进程前置失败继续保留，不替换成成功结果。当时系统省电完整周期仍在运行；最终结论见下一节。
+
+### API 31 外部系统省电实测与 E03 结论
+
+系统省电完整周期通过（[汇总](diagnostics/power-api31/saver/summary.json)、[观察原文](diagnostics/power-api31/saver/observer.txt)）。系统确实显示 Battery Saver ON，默认网络保持 VALIDATED；约 973 秒期间零新增请求、成功缓存不变。关闭省电后，原周期任务自动请求一次，period_count 从 4 增至 5，fetchedAt 从 1791630946 更新为 1791631985；[组件截图](diagnostics/power-api31/saver/recovered-widget.png) 显示更新于 19:33，crash buffer 为空、系统无 ANR，限制均恢复。
+
+Doze、后台受限、系统省电三种真实状态的单周期观察均通过，配合 API 29／31 的真实 503 指数退避、第三次终止及新请求恢复验证，E03 完成。实际正式包来源均为 alpha16／6ac605a；alpha17 仅新增诊断字段与测试，未修改这些后台生产路径。此结论不扩展为 OEM、真实账号或长期稳定性通过。
+
+[清理记录](diagnostics/power-api31/cleanup.txt) 确认合成账号和 APK 已删除、hosts 恢复、临时 CA 和 adb reverse 移除、全局代理关闭；模拟器实际重启后再次核验，实验服务停止、临时私钥删除。用户的 APK 签名 keystore 未读取或修改。
