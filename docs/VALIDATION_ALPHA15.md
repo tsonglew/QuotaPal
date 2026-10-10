@@ -66,3 +66,18 @@ API 31 完整失败报告显示 screenBounds=Rect(823,1196–886,1245)，语义 
 PR #12 首轮 38030802797 的 API 35／37.0 失败，其他四组成功。API 35 在目标就绪阶段报 `Refresh action must become visible`，尚未注入触摸，不能作为触摸已送达的证据。后续候选沿语义节点向上查找最近动作容器，拒绝包含额度正文的外层打开 App 容器，并用窗口焦点、实际可见矩形判断可点击位置；不再把 `isLayoutRequested` 当作可见性前提。失败输出增加父节点、焦点、尺寸、布局请求状态及截图。此候选和五轮重复检查仍待新的云端执行验证。
 
 API 37.0 的输入轨迹显示第一次 DOWN 被处理而 UP 未被处理，随后真实触摸触发 MainActivity 的全组件打开动作。logcat 在 06:32:10.777 通知主组件更新，06:32:10.793 启动 MainActivity；这支持 RemoteViews 替换与手势竞争的判断。debug 宿主记录实际 updateAppWidget 时间，测试在 UI idle 之后重新读取位置，并等待目标对象、矩形以及宿主更新均稳定 500ms 才注入触摸。原刷新行为断言和六组五轮重复检查保留；该候选仍需 CI 验证。
+
+## master 自动签名产物与点击修复结果
+
+PR #13 的精确提交 503d59d 在运行 [38031371128](https://github.com/tsonglew/QuotaPal/actions/runs/38031371128) 完整六组 CI 成功后合并，master=a983dfd9198356340795bbdc2e30b6aa9ecca3ed。合并事件自动触发 [38031990526](https://github.com/tsonglew/QuotaPal/actions/runs/38031990526)，debug／release 构建、lint、JVM、六组设备测试与 minified 页面检查、统一 gate 和 Build fixed-signature APK 均成功，无手动触发、无公开 Release。
+
+已实际下载 [android-signed-apk](https://github.com/tsonglew/QuotaPal/actions/runs/38031990526/artifacts/11662492337)。独立校验结果如下。
+
+- APK：QuotaPal-0.1.0-alpha15.apk，包名 com.tsonglew.quotapal，versionCode=15，minSdk=29，targetSdk=36。
+- SHA-256：85bbcc69e94f39a7f5334f4ecdb0e74c142e16d312c7befa316b08e99c9aeb26；与 SHA256SUMS 和 provenance.json 一致。
+- apksigner 验证通过，实际证书 SHA-256 为 5e7980c122100ccf9799a5174cb0e5a1748b8c442c09c015e145003145d2b5d4，与 android-release 的公开证书变量及 provenance 一致；未读取或导出 keystore／密码。
+- zipalign -c -P 16 4 通过。provenance 的 source_sha 为上述 master a983dfd，mode=signing-check；此模式只生成签名资产，不调用 Release 发布接口。
+
+PR #12 的精确提交 1b9bcd363d0cac44ca8a35514c83bcc4de096ae9 在 [38031921806](https://github.com/tsonglew/QuotaPal/actions/runs/38031921806) 完整六组 CI 成功；每组在原套件后又通过五轮真实三组件点击检查，合计 30 轮追加。已下载 API 37.0 原始日志，attempt-1 至 attempt-5 均为 OK (1 test)／INSTRUMENTATION_CODE: -1。原进度、请求去重、成功快照与唯一周期任务断言保留。该修复合并为 master 12c557bff84fd78230a586362268c3cf43d87794，其自动运行 38032639377 仍单独等待结果；不把 PR 成功当成新 master 已完成验证。
+
+G02 的 PR／master gate 有实际成功证据。固定签名配置已证实可用，但正式签名覆盖升级／数据迁移（F02）、版本 tag 的公开 Release（G05／G08）、真实账号／OEM／48 小时和七天观察仍未完成。
