@@ -69,7 +69,11 @@ class WidgetRefreshActionDeviceTest {
                 val clickDeadline = android.os.SystemClock.elapsedRealtime() + 20_000
                 var refreshBounds: android.graphics.Rect? = null
                 var lastTree = ""
+                var stableTarget: android.view.View? = null
+                var stableBounds: android.graphics.Rect? = null
+                var stableSince = 0L
                 while (refreshBounds == null && android.os.SystemClock.elapsedRealtime() < clickDeadline) {
+                    instrumentation.waitForIdleSync()
                     scenario.onActivity { activity ->
                         val views = descendants(activity.widgetView)
                         lastTree = views.joinToString("\n") {
@@ -93,8 +97,22 @@ class WidgetRefreshActionDeviceTest {
                                 val screen = IntArray(2)
                                 target.getLocationOnScreen(screen)
                                 bounds.offset(screen[0], screen[1])
-                                refreshBounds = bounds
-                                touchDescription = "screenBounds=$bounds; action=${action.javaClass.simpleName}; target=${target.javaClass.simpleName}; tree=$lastTree"
+                                val now = android.os.SystemClock.uptimeMillis()
+                                if (target !== stableTarget || bounds != stableBounds) {
+                                    stableTarget = target
+                                    stableBounds = android.graphics.Rect(bounds)
+                                    stableSince = now
+                                }
+                                // AppWidget updates can replace a child between DOWN and
+                                // UP. Wait for both the actual hit target and host updates
+                                // to settle before starting the real gesture.
+                                if (now - stableSince >= 500 && now - activity.lastWidgetUpdateAt >= 500) {
+                                    refreshBounds = bounds
+                                    touchDescription = "screenBounds=$bounds; action=${action.javaClass.simpleName}; target=${target.javaClass.simpleName}; tree=$lastTree"
+                                }
+                            } else {
+                                stableTarget = null
+                                stableBounds = null
                             }
                         }
                     }
@@ -118,7 +136,6 @@ class WidgetRefreshActionDeviceTest {
                         if (eventAction == android.view.MotionEvent.ACTION_DOWN) Thread.sleep(50)
                     }
                 }
-                instrumentation.waitForIdleSync()
                 // A real touch targets Glance's action even when its semantic wrapper
                 // and PendingIntent live on different nodes. Ancestor performClick can
                 // accidentally invoke the widget's open-App action instead.
