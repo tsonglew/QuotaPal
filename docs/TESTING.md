@@ -96,3 +96,11 @@ master 12c557b 的 [38032639377](https://github.com/tsonglew/QuotaPal/actions/ru
 master f5edf96 的 [38034462993](https://github.com/tsonglew/QuotaPal/actions/runs/38034462993) 又在 API 37.0 失败。[截图](screenshots/emulator-pixel-launcher-anr-api37.png) 明确显示 Pixel Launcher isn't responding，系统日志确认默认桌面 com.google.android.apps.nexuslauncher 输入超时；原 Quickstep 专用处理没有匹配此变体，窗口持续失去焦点，尚未注入点击。
 
 测试候选只在模拟器 ro.kernel.qemu=1、系统包 android 的活动窗口、完整标题与系统默认 HOME 对应时，保存截图并关闭一次该弹窗：com.android.launcher3 对应 Quickstep isn't responding，com.google.android.apps.nexuslauncher 对应 Pixel Launcher isn't responding。桌面必须带系统包标记，随后继续原按钮可见性与真实点击断言。重复弹窗、未知弹窗及 QuotaPal 自身 ANR／崩溃不在处理范围，仍阻断测试。查询声明仅在 debug manifest，处理代码仅在 androidTest，不进入正式 APK。此处理需新的云端矩阵实际验证，不宣称已修复系统桌面的 ANR。
+
+## 真实 WorkManager 退避探针
+
+`scripts/scheduled_retry_smoke.sh` 显式运行 `ScheduledRetryDeviceTest`，要求模拟器、debug 包和 OS 已验证的网络。使用真实 `SyncScheduler.refresh` 与 WorkManager：合成 503 连续失败，分别检查实际请求间至少约 30／60 秒的指数退避，第三次进入 FAILED，终止后不增加请求且保留原缓存；新的用户刷新必须创建新任务、只请求一次并成功替换快照。请求时刻由测试拦截器记录单调时钟，不修改时钟、持久化限流字段或 runAttemptCount，也不调用 TestDriver。
+
+普通套件默认跳过；CI API 29 在原省电恢复探针后单独执行并保存 `scheduled-retry-probe.txt`，仍需明确 OK (1 test) 与 instrumentation 成功状态。宿主执行有超时；结束强停测试应用，失败时清除可能残留的合成凭据。此项证明真实调度的有限重试，不代替保持网络时的 Doze／省电限制观察及长期验收。
+
+2026-10-10 本地 API 31 实际通过（112.842 秒）：两段请求间隔为 30,237／60,127 ms，第三次进入 FAILED，新用户请求成功。证据：[runner 原文](diagnostics/scheduled-retry-probe-api31.txt)、[实际时长](diagnostics/scheduled-retry-timing-api31.txt)。云端 API 29 新增探针仍须独立运行，E03 保持未完成。

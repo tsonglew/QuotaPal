@@ -14,7 +14,7 @@ if [[ "$test_result" -eq 0 ]]; then
     bash scripts/widget_touch_smoke.sh && bash scripts/lifecycle_smoke.sh && bash scripts/system_time_smoke.sh && bash scripts/network_smoke.sh
     test_result=$?
     if [[ "$test_result" -eq 0 && "$(adb -e shell getprop ro.build.version.sdk | tr -d '\r')" == 29 ]]; then
-      bash scripts/power_smoke.sh
+      bash scripts/power_smoke.sh && bash scripts/scheduled_retry_smoke.sh
       test_result=$?
     fi
   else
