@@ -36,3 +36,11 @@ E03 的系统后台约束、E07／H04／I03 的 Samsung／小米 Launcher、E08 
 PR [#10](https://github.com/tsonglew/QuotaPal/pull/10) 已创建并关联本任务。诊断实现提交为 2699a6582429801ee836bc0c410924b6e3f6fa28；该提交 build／delivery 通过，设备矩阵随后被新提交取消，不能视为通过。重复 push 运行被取消后，旧版 always() gate 将取消显示为失败。
 
 修复提交 3e5aeb5953cd8539d9252a1c18c17fd01d883872 取消开发分支重复 push 触发，并令整个运行被取消时 gate 跳过；实际构建或测试失败仍使 gate 失败。actionlint 与 diff 检查通过。[新 CI 38018860257](https://github.com/tsonglew/QuotaPal/actions/runs/38018860257) 已启动，完整结果待核验。
+
+已实际下载运行 38018860257 的 android-apk，使用 apk_artifact.py verify 校验成功：source_sha=3e5aeb5953cd8539d9252a1c18c17fd01d883872，build_sha=7789849b5456b280254a6d1e1953f937afefde6b，APK SHA-256=aebd3830dbf6cac157843d520d8bbe6dd6d96235ddf5292a12868507e3625d1c。aapt2 独立核对包名、versionCode=15、versionName=0.1.0-alpha15、minSdk=29、targetSdk=36；apksigner verify 通过。此为 debug 预览构建，不证明固定正式证书或成功 deployment。
+
+## PR 完整 CI 与预览验收
+
+运行 38018860257 最终 success：delivery、build、API 29／31／35／36／37.0／37.2 六组设备测试、Android CI gate 全部通过。API 29 实际下载 HTML 报告中 diagnosticsCanPreviewAndClearWithoutUploading=passed（5.457s），realRemoteViewsClickFetchesOnceForThreeWidgets=passed（5.043s）；保留原三组件进度与请求去重断言。此前主分支失败记录仍保留，本轮成功不表示已证明所有间歇性失败原因。
+
+预览工作流 [38019563477](https://github.com/tsonglew/QuotaPal/actions/runs/38019563477) success，deployment 6975361817 环境 android-preview/pr-10，sha/ref 均为 3e5aeb5953cd8539d9252a1c18c17fd01d883872，状态 success。[APK 下载入口](https://github.com/tsonglew/QuotaPal/actions/runs/38018860257/artifacts/11657277423) 对应已实际下载校验的产物。G03 完成；主分支完整回归、固定签名、覆盖升级和正式 Release 仍未完成。
