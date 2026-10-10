@@ -39,3 +39,9 @@ CI 38002272484 全部终态：API 29／31／35／36 成功，37.0／37.2 在补�
 - CI 38006708030 设备全部终态：31／35／36／37.2 成功，37.2 实际 guest SDK=37、PAGE_SIZE=16384，完整 18 项普通测试与四个独立探针通过；37.0 实际 SDK=37、PAGE_SIZE=4096，17 项普通测试通过，唯一失败为三组件刷新中观察。两组实际 Vulkan／GlDirectMem／HasSharedSlotsHostMemoryAllocator 均为 1，AVD 主版本元数据修正已使系统进入 App 测试；统一 gate 因 29／37.0 测试失败继续不通过，E06 不勾选。
 
 - API 29 缩放失败核对平台源码：HostView 两种 updateAppWidgetSize API 会扣除默认 padding，测试宿主却传入内容尺寸。修正所有 API 的宿主尺寸换算，新增 provider 实收尺寸断言及实际文本／options 失败信息；API 35 首轮新断言明确捕获 140 被扣成 124，修正后通过。刷新测试改为向唯一可见刷新语义区域实际注入两次触摸，避免沿父级 performClick 误调用打开 App 动作，保留刷新中、三组件 83%、单请求及唯一周期任务断言。两处变更的三项针对性设备回归：API 35 全部通过（9.28 秒），API 37 全部通过（25.935 秒）；API 29 与云端仍待新候选验证。
+
+## 六版本 CI 验收
+
+2026-10-10，源提交 f0e1fffc58452bd62545e623d08ca329c3c1b2dd 的 [运行 38007906590](https://github.com/tsonglew/QuotaPal/actions/runs/38007906590) 全部终态成功：build、delivery、29／31／35／36／37.0／37.2 六组设备矩阵、Android CI gate。37.0／37.2 各 18 项实际普通测试及四个独立探针通过，实际 guest SDK=37、PAGE_SIZE=4096／16384；三组件真实触摸刷新及缩放尺寸断言保留。E06 已勾选完成。
+
+里程碑 PR 创建再次调用 GitHub 集成，实际返回 403 Resource not accessible by integration，尚无新 PR 或合并；没有绕过权限直接推送 master。G02 的 PR／主分支、G03 的实际源提交 deployment、G05／G08 的正式固定签名和发布仍未验收；真实账号完整生命周期、OEM、48 小时／7 天观察仍保留。

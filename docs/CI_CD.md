@@ -56,7 +56,7 @@ CI debug 签名与 release 签名不同，首次切换需要卸载 debug 包再�
 
 ## 当前验证状态
 
-APK 产物工具 6 项测试通过，覆盖来源区分、篡改 APK、错误提交、符号链接、错误应用及校验清单拒绝。[GitHub CI 运行 37978463336](https://github.com/tsonglew/QuotaPal/actions/runs/37978463336) 的构建、lint、单元测试、四版本设备矩阵及 gate 全部通过。环境配置、正式发布签名、升级及 deployment 下载仍待验证；不能仅凭 YAML 完成就勾选 G08。
+[GitHub CI 运行 38007906590](https://github.com/tsonglew/QuotaPal/actions/runs/38007906590)（源提交 f0e1fffc58452bd62545e623d08ca329c3c1b2dd）的构建、lint、单元测试、产物工具、六组设备矩阵及统一 gate 全部通过，覆盖 API 29／31／35／36／37.0／37.2。Android 17 两组完整普通测试各 18 项，实际页面大小 4096／16384；AVD 元数据修正获得云端验证。PR 创建仍实际返回集成权限 403，PR／主分支完整 gate、环境配置、正式发布签名、升级及 deployment 下载仍待验证，G08 继续保留。
 
 发布控制另有 5 项命令替身测试：上传完成后才公开 draft、证书不匹配、缺失凭据、错误版本均不调用 GitHub，已公开版本不覆盖。替身测试不证明实际证书签名或 GitHub API 发布成功。
 
