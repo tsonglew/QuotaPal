@@ -50,6 +50,7 @@ fun QuotaPalApp(model: MainViewModel) {
     val state by model.state.collectAsStateWithLifecycle()
     val prefs by model.preferences.collectAsStateWithLifecycle()
     val login by model.login.collectAsStateWithLifecycle()
+    val operationError by model.error.collectAsStateWithLifecycle()
     val clock by produceState(Instant.now().epochSecond, timeRevision) {
         while (true) { value = Instant.now().epochSecond; delay(30_000) }
     }
@@ -88,6 +89,11 @@ fun QuotaPalApp(model: MainViewModel) {
                 Spacer(Modifier.height(28.dp))
             }
             }
+        }
+        operationError?.let { message ->
+            AlertDialog(onDismissRequest = model::dismissError,
+                title = { Text("操作未完成") }, text = { Text(message) },
+                confirmButton = { TextButton(onClick = model::dismissError) { Text("知道了") } })
         }
         login?.let { LoginDialog(it, model::cancelLogin, model::startLogin) }
     }

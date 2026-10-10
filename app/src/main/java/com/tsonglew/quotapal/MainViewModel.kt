@@ -13,25 +13,32 @@ data class LoginState(val challenge: DeviceChallenge? = null, val error: String?
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as QuotaPalApplication
     val state = app.repository.state
-    val preferences = app.settings.flow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), PreferencesState())
+    private val mutableError = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = mutableError
+    fun dismissError() { mutableError.value = null }
+    private fun reportError() { mutableError.value = "操作未完成，请重试；若持续失败，请检查设备可用存储空间" }
+    private fun launchOperation(block: suspend () -> Unit) = viewModelScope.launch {
+        runUiOperation(::reportError, block)
+    }
+    val preferences = app.settings.flow.retrySettings(::reportError).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), PreferencesState())
     private val mutableLogin = MutableStateFlow<LoginState?>(null)
     val login: StateFlow<LoginState?> = mutableLogin
     private var loginJob: Job? = null
 
     init { onForeground() }
     fun onForeground() {
-        viewModelScope.launch {
+        launchOperation {
             app.repository.initialize()
             if (state.value.connected) { app.repository.refresh(); app.updateWidgets() }
             app.reconcileSync()
         }
     }
-    fun refresh() { viewModelScope.launch { app.repository.refresh(true); app.updateWidgets() } }
-    fun demo() { viewModelScope.launch { cancelLogin(); app.repository.demo(); app.reconcileSync(); app.updateWidgets() } }
-    fun logout() { cancelLogin(); app.scope.launch { app.repository.logout(); app.reconcileSync(); app.updateWidgets() } }
-    fun showRemaining(value: Boolean) { viewModelScope.launch { app.settings.showRemaining(value); app.updateWidgets() } }
-    fun theme(value: String) { viewModelScope.launch { app.settings.theme(value) } }
-    fun refreshMinutes(value: Long) { viewModelScope.launch { app.settings.refreshMinutes(value); app.reconcileSync() } }
+    fun refresh() { launchOperation { app.repository.refresh(true); app.updateWidgets() } }
+    fun demo() { launchOperation { cancelLogin(); app.repository.demo(); app.reconcileSync(); app.updateWidgets() } }
+    fun logout() { cancelLogin(); app.scope.launch { runUiOperation(::reportError) { app.repository.logout(); app.reconcileSync(); app.updateWidgets() } } }
+    fun showRemaining(value: Boolean) { launchOperation { app.settings.showRemaining(value); app.updateWidgets() } }
+    fun theme(value: String) { launchOperation { app.settings.theme(value) } }
+    fun refreshMinutes(value: Long) { launchOperation { app.settings.refreshMinutes(value); app.reconcileSync() } }
 
     fun startLogin() {
         cancelLogin()
