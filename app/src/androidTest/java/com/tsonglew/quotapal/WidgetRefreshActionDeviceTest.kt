@@ -120,7 +120,7 @@ class WidgetRefreshActionDeviceTest {
                         }
                     }
                     if (!hasWindowFocus && !recoveredLauncherDialog) {
-                        recoveredLauncherDialog = dismissQuickstepAnrOnEmulator(instrumentation)
+                        recoveredLauncherDialog = dismissLauncherAnrOnEmulator(instrumentation)
                     }
                     if (refreshBounds == null) Thread.sleep(50)
                 }
