@@ -24,4 +24,10 @@
 
 本机更新后的 debug／androidTest 编译成功，专用 API 31 模拟器上 WidgetRefreshActionDeviceTest 两项实际通过（4.838 秒），保留三组件进度、唯一请求及最终额度断言；本轮没有出现桌面弹窗，不能据此声称已实际执行弹窗关闭分支。本机独立 release 构建达到 600 秒预算后退出 124，不算通过；候选 minified 构建仍需 master 云端结果。
 
+追加受控桌面故障对照：只在已核对名称的专用 API 31 AVD 暂停系统 Pixel Launcher，再注入输入造成实际 ANR，随后 finally 恢复该进程。输入命令达到 20 秒限时，并非普通成功返回；后续 UI XML 和系统日志实际确认出现完整匹配的弹窗。运行原三组件真实点击测试，处理分支日志明确记录关闭 com.google.android.apps.nexuslauncher，保留[关闭前截图](screenshots/emulator-pixel-launcher-recovery-api31.png)，原断言通过（5.908 秒）。这证明已执行恢复分支，不证明桌面自身 ANR 被修复。
+
+433a66c 的 [CI 38036477159](https://github.com/tsonglew/QuotaPal/actions/runs/38036477159) 最终五组成功、API 35 失败、gate 正确失败。失败来自诊断报告预览的 Dialog 创建：[完整栈](diagnostics/alpha16-compose-test-thread.txt) 包含 DefaultDispatcher、TestMonotonicFrameClock、ApplyingContinuationInterceptor，尚未在生产运行器复现。[AndroidX 测试源码](https://android.googlesource.com/platform/frameworks/support/+/202b4bda8adfeb303ac30e359e8436a3752fe2b0/compose/ui/ui-test/src/commonMain/kotlin/androidx/compose/ui/test/ApplyingContinuationInterceptor.kt) 说明此拦截器在恢复 continuation 后发送快照通知；据堆栈推断，测试的不受线程约束的恢复路径触发了后台重组。候选将预览／清除协程显式约束到 Android 主调度器，文件读取仍在 IO，增加五轮实际预览／清除及额度请求数不变断言，需重新验证。
+
 正式签名候选、模拟器升级及恢复的结果另行填写。当前完成夹具、环境准备及 debug 定向回归，不声明正式升级已通过。
+
+主线程约束修订后，debug／androidTest 重新构建成功，专用 API 31 AppFlowTest 四项全部通过（18.166 秒），包含五轮预览／清除、共十次报告弹窗，以及额度请求数不变断言。实际签名升级前会卸载该 debug 测试数据，重新安装正式 alpha15 并经其自身连接入口建立基线；不会将 debug 数据或测试签名当作升级基线。

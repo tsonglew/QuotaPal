@@ -71,21 +71,28 @@ class AppFlowTest {
     }
 
     @Test fun diagnosticsCanPreviewAndClearWithoutUploading() {
-        val diagnostics = compose.activity.quotaApp.diagnostics
-        diagnostics.clear()
-        diagnostics.record(com.tsonglew.quotapal.diagnostics.DiagnosticEvent.HTTP_START, 0)
+        val app = compose.activity.quotaApp as TestQuotaApplication
+        val diagnostics = app.diagnostics
+        val requestsBefore = app.usageRequests.get()
         compose.onNodeWithTag("tab-settings").performClick()
-        compose.onNodeWithTag("diagnostics-preview").performScrollTo().performClick()
-        compose.waitUntil(10_000) { compose.onAllNodesWithTag("diagnostics-report").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("diagnostics-report").assertTextContains("Hourly observations schema=1", substring = true)
-        compose.onNodeWithTag("diagnostics-report").assertTextContains("HTTP_START 0", substring = true)
-        compose.onNodeWithTag("diagnostics-close").performClick()
-        compose.onNodeWithTag("diagnostics-clear").performScrollTo().performClick()
-        compose.waitUntil(10_000) { !diagnostics.report().contains("HTTP_START 0") }
-        compose.onNodeWithTag("diagnostics-preview").performScrollTo().performClick()
-        compose.waitUntil(10_000) { compose.onAllNodesWithTag("diagnostics-report").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("diagnostics-report").assertTextContains("Recent events", substring = true)
-        compose.onNodeWithTag("diagnostics-close").performClick()
+        // Exercise asynchronous read/clear continuations across repeated dialog
+        // creation; an IO completion previously recomposed on a worker thread.
+        repeat(5) {
+            diagnostics.clear()
+            diagnostics.record(com.tsonglew.quotapal.diagnostics.DiagnosticEvent.HTTP_START, 0)
+            compose.onNodeWithTag("diagnostics-preview").performScrollTo().performClick()
+            compose.waitUntil(10_000) { compose.onAllNodesWithTag("diagnostics-report").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithTag("diagnostics-report").assertTextContains("Hourly observations schema=1", substring = true)
+            compose.onNodeWithTag("diagnostics-report").assertTextContains("HTTP_START 0", substring = true)
+            compose.onNodeWithTag("diagnostics-close").performClick()
+            compose.onNodeWithTag("diagnostics-clear").performScrollTo().performClick()
+            compose.waitUntil(10_000) { !diagnostics.report().contains("HTTP_START 0") }
+            compose.onNodeWithTag("diagnostics-preview").performScrollTo().performClick()
+            compose.waitUntil(10_000) { compose.onAllNodesWithTag("diagnostics-report").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithTag("diagnostics-report").assertTextContains("Recent events", substring = true)
+            compose.onNodeWithTag("diagnostics-close").performClick()
+        }
+        org.junit.Assert.assertEquals("Diagnostics must not fetch quota", requestsBefore, app.usageRequests.get())
     }
 
     private fun screenshot(name: String) {

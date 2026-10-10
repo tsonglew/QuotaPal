@@ -406,7 +406,9 @@ private fun DiagnosticEntry() {
     Text("问题排查", fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 18.dp))
     Text("本机保留最近 200 条事件和 7 天按小时统计，不自动上传。复现问题后可预览并分享给维护者。", fontSize = 12.sp)
     TextButton(onClick = {
-        scope.launch {
+        // Dialog state must return to Android's main dispatcher, including
+        // when a Compose test supplies an unconfined effect interceptor.
+        scope.launch(Dispatchers.Main.immediate) {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
                     val app = context.quotaApp
@@ -424,7 +426,7 @@ private fun DiagnosticEntry() {
             result.onSuccess { report = it }.onFailure { failed = true }
         }
     }, modifier = Modifier.testTag("diagnostics-preview")) { Text("预览诊断报告") }
-    TextButton(onClick = { scope.launch { val result = withContext(Dispatchers.IO) { runCatching { context.quotaApp.diagnostics.clear() } }; result.onFailure { failed = true } } }, modifier = Modifier.testTag("diagnostics-clear")) { Text("清除诊断记录") }
+    TextButton(onClick = { scope.launch(Dispatchers.Main.immediate) { val result = withContext(Dispatchers.IO) { runCatching { context.quotaApp.diagnostics.clear() } }; result.onFailure { failed = true } } }, modifier = Modifier.testTag("diagnostics-clear")) { Text("清除诊断记录") }
     report?.let { text ->
         AlertDialog(onDismissRequest = { report = null }, title = { Text("诊断报告") },
             text = { SelectionContainer { Text(text, fontSize = 11.sp, modifier = Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()).testTag("diagnostics-report")) } },
