@@ -2,6 +2,7 @@ import http.client
 import json
 from pathlib import Path
 import ssl
+import socket
 import sys
 import tempfile
 import threading
@@ -93,6 +94,57 @@ class UpgradeLabServerTest(unittest.TestCase):
         self.assertEqual(3, self.fixture.counts['usage'])
         self.assertEqual(1, self.fixture.counts['renewals'])
         self.assertEqual(1, self.fixture.counts['rejected'])
+
+
+class DirectTlsLabServerTest(UpgradeLabServerTest):
+    def setUp(self):
+        super().setUp()
+        self.direct, _ = make_server(self.directory.name, 0, fixture=self.fixture, direct_tls=True)
+        self.direct_thread = threading.Thread(target=self.direct.serve_forever, daemon=True)
+        self.direct_thread.start()
+
+    def tearDown(self):
+        self.direct.shutdown()
+        self.direct.server_close()
+        self.direct_thread.join(timeout=5)
+        super().tearDown()
+
+    def request(self, host, method, path, body=None, headers=None):
+        if host:
+            return self.direct_request(host, path, method, body, headers)
+        return super().request(host, method, path, body, headers)
+
+    def direct_request(self, host, path, method='GET', body=None, headers=None):
+        connection = http.client.HTTPConnection(host, timeout=5)
+        raw = socket.create_connection(('127.0.0.1', self.direct.server_port), timeout=5)
+        try:
+            tls_host = host if host in ('auth.openai.com', 'chatgpt.com') else 'auth.openai.com'
+            connection.sock = self.trust.wrap_socket(raw, server_hostname=tls_host)
+            connection.request(method, path, body=body, headers=headers or {})
+            response = connection.getresponse()
+            return response.status, json.loads(response.read())
+        finally:
+            connection.close()
+            raw.close()
+
+    def test_direct_tls_shares_state_and_rejects_unknown_authority(self):
+        status, _ = self.direct_request('auth.openai.com', '/api/accounts/deviceauth/usercode', 'POST')
+        self.assertEqual(200, status)
+        status, counters = self.request(None, 'GET', '/lab/state')
+        self.assertEqual(200, status)
+        self.assertEqual(1, counters['challenges'])
+        self.assertEqual(403, self.direct_request('example.com', '/')[0])
+        self.assertEqual(403, self.direct_request('auth.openai.com', '/lab/after-upgrade', 'POST')[0])
+        self.assertFalse(self.fixture.require_renewal)
+
+    def test_direct_tls_requires_ca_trust(self):
+        raw = socket.create_connection(('127.0.0.1', self.direct.server_port), timeout=5)
+        try:
+            with self.assertRaises(ssl.SSLCertVerificationError):
+                ssl.create_default_context().wrap_socket(raw, server_hostname='auth.openai.com')
+        finally:
+            raw.close()
+        self.assertEqual(0, self.fixture.counts['challenges'])
 
 
 if __name__ == '__main__':

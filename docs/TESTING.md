@@ -103,4 +103,20 @@ master f5edf96 的 [38034462993](https://github.com/tsonglew/QuotaPal/actions/ru
 
 普通套件默认跳过；CI API 29 在原省电恢复探针后单独执行并保存 `scheduled-retry-probe.txt`，仍需明确 OK (1 test) 与 instrumentation 成功状态。宿主执行有超时；结束强停测试应用，失败时清除可能残留的合成凭据。此项证明真实调度的有限重试，不代替保持网络时的 Doze／省电限制观察及长期验收。
 
-2026-10-10 本地 API 31 实际通过（112.842 秒）：两段请求间隔为 30,237／60,127 ms，第三次进入 FAILED，新用户请求成功。证据：[runner 原文](diagnostics/scheduled-retry-probe-api31.txt)、[实际时长](diagnostics/scheduled-retry-timing-api31.txt)。云端 API 29 新增探针仍须独立运行，E03 保持未完成。
+2026-10-10 本地 API 31 实际通过（112.842 秒）：两段请求间隔为 30,237／60,127 ms，第三次进入 FAILED，新用户请求成功。证据：[runner 原文](diagnostics/scheduled-retry-probe-api31.txt)、[实际时长](diagnostics/scheduled-retry-timing-api31.txt)。PR #18 的 [完整 CI](https://github.com/tsonglew/QuotaPal/actions/runs/38042885098) 已通过六组设备与 gate，API 29 独立探针 112.766 秒成功，实际退避为 30,098／60,098 ms（[runner](diagnostics/scheduled-retry-probe-api29.txt)、[时长](diagnostics/scheduled-retry-timing-api29.txt)）。E03 的省电场景仍待完成。
+
+## 保持联网的外部后台观察
+
+进程内 instrumentation 会保留 WorkManager 的 GreedyScheduler；本地 API 31 实验中，即使 JobScheduler 显示 `readyNotDozing=false`，活着的测试进程仍执行了到期任务。因此该方式不能证明应用退出后的系统调度延迟，不能只检查 JobScheduler 字段便宣称通过。
+
+`scripts/upgrade_lab_server.py` 支持 `--direct-tls-port 9444`，与原 `--port 9443` 的控制接口共享合成账号和请求计数。直接 TLS 只接受 `auth.openai.com`／`chatgpt.com` 的固定协议路径，拒绝未知 Host 和 `/lab/*` 控制路径；所有模式均不转发外部请求。该入口用于自建、可 root 的一次性模拟器，不修改正式 APK 的证书校验或业务代码。
+
+实验准备流程：
+
+1. 确认目标 serial、AVD 名称和 `ro.kernel.qemu=1`，保存原 hosts、deep Doze、屏幕、电池、省电与 app-op 状态。使用新建实验目录生成临时 CA；保留原始 hosts 备份，不能用上次实验的映射覆盖它。
+2. 仅在该模拟器安装临时系统 CA，将两个协议域名映射到 loopback，重启使信任与 DNS 生效。通过指定 serial 的 `adb reverse tcp:443 tcp:9444` 接入本机服务；保持全局 HTTP 代理关闭，核对当前默认网络实际具有 VALIDATED。
+3. 安装已核验哈希／固定签名的正式 APK，用合成账号连接，通过界面选择 15 分钟周期并添加实际桌面组件。等首次周期完成后，回到桌面并使用 `am kill` 回收后台进程，确认 PID 消失；不能用会暂停后台任务的 force-stop 代替。
+4. 外部记录服务请求计数、只读数据库副本、唯一 WorkSpec 的周期／入队时间／尝试次数、JobScheduler 约束和网络状态。限制期间实际等待完整周期，不能修改时钟、数据库或强制执行 job。解除限制后等待系统自行启动刷新，核对原任务、成功缓存时间和组件恢复。
+5. 结束时恢复系统限制、原 hosts，移除临时 CA 与 adb reverse，并清除模拟器中的合成账号。对 writable-system 镜像重启复核恢复结果，再关闭模拟器，避免旧映射在下次启动重新出现。
+
+2026-10-10：直接 TLS 下正式 alpha16 已完成实际连接和额度读取，默认网络保持 VALIDATED；协议测试覆盖认证／401 续期／读取、共享计数、未知域名及控制路由拒绝、CA 信任。完整周期观察仍在运行，以上准备成功不代表 E03 已通过。
