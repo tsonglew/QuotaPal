@@ -113,6 +113,6 @@ Android 17 新候选启用官方 Vulkan composition（`-feature VulkanNativeSwap
 
 ### 固定签名验证（不公开发布）
 
-在已合并的 master 上手动运行 Android CI，勾选 check-signing。此选项自动启用 release 构建、release lint／R8 及现有 minified 设备检查，完整六版本 gate 成功后才访问 android-release secrets。签名检查沿用正式签名脚本并校验证书、APK 版本和 16KB 对齐；上传 android-fixed-signature-check（14 天），provenance 标记 mode=signing-check。候选 tag 仅表示版本名称，不证明对应 Git tag 已创建；流程不会创建 tag、GitHub Release 或 deployment。
+在已合并的 master 上手动运行 Android CI，勾选 check-signing。此选项自动启用 release 构建、release lint／R8 及现有 minified 设备检查，完整六版本 gate 成功后才访问 android-release secrets。签名检查沿用正式签名脚本并校验证书、APK 版本和 16KB 对齐；上传 android-fixed-signature-check（14 天），provenance 标记 mode=signing-check。候选 tag 仅表示版本名称，不证明对应 Git tag 已创建；流程不会创建 tag 或 GitHub Release。使用 android-release environment 的 job 会由 GitHub 生成环境部署记录；该成功记录表示签名验证通过，不代表公开 Release。
 
 手动 check-signing 仅允许 master；master push 会自动执行同一固定签名验证并上传 android-signed-apk。PR／fork／其他分支不能执行带发布凭据的步骤。有固定签名 APK 后可执行真实覆盖安装与数据迁移验收。正式公开发布仍走版本 tag 的 Release 流程，并满足稳定性验收条件。
