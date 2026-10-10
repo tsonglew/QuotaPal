@@ -33,6 +33,7 @@ class WidgetRefreshActionDeviceTest {
                     is android.view.ViewGroup -> (0 until view.childCount).flatMap { labels(view.getChildAt(it)) }
                     else -> emptyList()
                 }
+                var touchDescription = "not tapped"
                 fun awaitBoth(expected: String, timeoutMillis: Long = 20_000) {
                     val deadline = android.os.SystemClock.elapsedRealtime() + timeoutMillis
                     var matched = false
@@ -49,7 +50,7 @@ class WidgetRefreshActionDeviceTest {
                         actual = listOf(activity.widgetView, requireNotNull(activity.secondaryWidgetView), requireNotNull(activity.thirdWidgetView))
                             .joinToString(" | ") { labels(it).joinToString { label -> label.text.toString() } }
                     }
-                    org.junit.Assert.assertTrue("All three widgets must show $expected; actual=$actual; requests=${app.usageRequests.get()}; state=${app.repository.state.value}; diagnostics=${app.diagnostics.report()}", matched)
+                    org.junit.Assert.assertTrue("All three widgets must show $expected; actual=$actual; touch=$touchDescription; requests=${app.usageRequests.get()}; state=${app.repository.state.value}; diagnostics=${app.diagnostics.report()}", matched)
                 }
                 awaitBoth("62%")
                 val before = app.usageRequests.get()
@@ -76,8 +77,15 @@ class WidgetRefreshActionDeviceTest {
                         org.junit.Assert.assertTrue("Refresh semantics must be unique\n$lastTree", actions.size <= 1)
                         actions.singleOrNull()?.let { action ->
                             val bounds = android.graphics.Rect()
-                            if (action.isShown && action.getGlobalVisibleRect(bounds) && !bounds.isEmpty) {
+                            if (activity.hasWindowFocus() && action.isShown && !action.isLayoutRequested &&
+                                action.getLocalVisibleRect(bounds) && !bounds.isEmpty) {
+                                // Input injection takes screen coordinates. GlobalVisibleRect
+                                // is relative to the root View and can omit the window offset.
+                                val screen = IntArray(2)
+                                action.getLocationOnScreen(screen)
+                                bounds.offset(screen[0], screen[1])
                                 refreshBounds = bounds
+                                touchDescription = "screenBounds=$bounds; action=${action.javaClass.simpleName}; tree=$lastTree"
                             }
                         }
                     }
