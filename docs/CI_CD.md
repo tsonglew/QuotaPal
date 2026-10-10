@@ -42,6 +42,8 @@ Secrets 保存以上四项；不要把密码放到 Environment variables。macOS
 
 发布步骤只在所有测试通过后获取环境 secrets。编译任务不使用签名凭据，签名任务下载 unsigned release APK，以 `zipalign`、`apksigner` 完成对齐、签名和验证。临时 keystore 退出时删除。
 
+正式发布前可先验证固定签名配置：合并到 master 后，在 Actions → Android build and tests → Run workflow 选择 master，勾选 `check-signing`。它会运行完整 CI、构建 minified release，成功后使用 android-release 签名并上传 `android-fixed-signature-check`（保留 14 天），不会创建 GitHub Release。若环境配置了分支／tag 限制，需要同时允许 master 执行此验证及版本 tag 执行正式发布。下载验证产物后核对 provenance 中的源提交、版本、证书指纹和 APK SHA-256；仅配置环境不能证明密钥与指纹匹配。
+
 先更新 `versionCode`（递增）和 `versionName`，经 PR 合并到 master，再创建 `v<versionName>` tag。示例：`versionName = "0.1.0-alpha04"` 对应 `v0.1.0-alpha04`。Release 的手动运行也必须选择已有版本 tag，不能在分支上运行。
 
 最终资产为 `QuotaPal-<version>.apk`、`SHA256SUMS`、`provenance.json`。带连字符的版本标为 prerelease，稳定版本为普通 Release。发布 URL 在 GitHub Deployments 的 `android-release` 中可见。稳定 tag 应在 M4–M5 的真机、长期使用及公开发布验收后创建。
