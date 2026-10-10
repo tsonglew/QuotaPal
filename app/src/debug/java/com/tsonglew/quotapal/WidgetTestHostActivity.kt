@@ -25,6 +25,13 @@ class WidgetTestHostActivity : Activity() {
     var thirdWidgetView: AppWidgetHostView? = null
         private set
     private var secondaryWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+    val touchEvents = mutableListOf<String>()
+    override fun dispatchTouchEvent(event: android.view.MotionEvent): Boolean {
+        val handled = super.dispatchTouchEvent(event)
+        touchEvents.add("action=${event.actionMasked}, x=${event.rawX}, y=${event.rawY}, handled=$handled")
+        if (touchEvents.size > 20) touchEvents.removeAt(0)
+        return handled
+    }
     private lateinit var host: AppWidgetHost
     private lateinit var root: FrameLayout
     var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID

@@ -46,11 +46,13 @@ class WidgetRefreshActionDeviceTest {
                         if (!matched) Thread.sleep(50)
                     }
                     var actual = ""
+                    var deliveredTouches = ""
                     scenario.onActivity { activity ->
+                        deliveredTouches = activity.touchEvents.joinToString()
                         actual = listOf(activity.widgetView, requireNotNull(activity.secondaryWidgetView), requireNotNull(activity.thirdWidgetView))
                             .joinToString(" | ") { labels(it).joinToString { label -> label.text.toString() } }
                     }
-                    org.junit.Assert.assertTrue("All three widgets must show $expected; actual=$actual; touch=$touchDescription; requests=${app.usageRequests.get()}; state=${app.repository.state.value}; diagnostics=${app.diagnostics.report()}", matched)
+                    org.junit.Assert.assertTrue("All three widgets must show $expected; actual=$actual; touch=$touchDescription; delivered=$deliveredTouches; requests=${app.usageRequests.get()}; state=${app.repository.state.value}; diagnostics=${app.diagnostics.report()}", matched)
                 }
                 awaitBoth("62%")
                 val before = app.usageRequests.get()
@@ -76,16 +78,21 @@ class WidgetRefreshActionDeviceTest {
                         val actions = views.filter { it.contentDescription?.toString() == "刷新额度" }
                         org.junit.Assert.assertTrue("Refresh semantics must be unique\n$lastTree", actions.size <= 1)
                         actions.singleOrNull()?.let { action ->
+                            // Glance puts semantics on the TextView and the action on
+                            // its immediate wrapper. Target that wrapper's hit rectangle,
+                            // never the outer widget's open-App click listener.
+                            val target = if (action.hasOnClickListeners()) action else
+                                (action.parent as? android.view.View)?.takeIf { it.hasOnClickListeners() }
                             val bounds = android.graphics.Rect()
-                            if (activity.hasWindowFocus() && action.isShown && !action.isLayoutRequested &&
-                                action.getLocalVisibleRect(bounds) && !bounds.isEmpty) {
+                            if (target != null && activity.hasWindowFocus() && target.isShown && !target.isLayoutRequested &&
+                                target.getLocalVisibleRect(bounds) && !bounds.isEmpty) {
                                 // Input injection takes screen coordinates. GlobalVisibleRect
                                 // is relative to the root View and can omit the window offset.
                                 val screen = IntArray(2)
-                                action.getLocationOnScreen(screen)
+                                target.getLocationOnScreen(screen)
                                 bounds.offset(screen[0], screen[1])
                                 refreshBounds = bounds
-                                touchDescription = "screenBounds=$bounds; action=${action.javaClass.simpleName}; tree=$lastTree"
+                                touchDescription = "screenBounds=$bounds; action=${action.javaClass.simpleName}; target=${target.javaClass.simpleName}; tree=$lastTree"
                             }
                         }
                     }
@@ -103,12 +110,15 @@ class WidgetRefreshActionDeviceTest {
                             org.junit.Assert.assertTrue("Real refresh touch must be delivered",
                                 instrumentation.uiAutomation.injectInputEvent(event, true))
                         } finally { event.recycle() }
+                        if (eventAction == android.view.MotionEvent.ACTION_DOWN) Thread.sleep(50)
                     }
                 }
+                instrumentation.waitForIdleSync()
                 // A real touch targets Glance's action even when its semantic wrapper
                 // and PendingIntent live on different nodes. Ancestor performClick can
                 // accidentally invoke the widget's open-App action instead.
                 tapRefresh()
+                Thread.sleep(50)
                 tapRefresh()
                 try {
                     // Observe actual progress before permitting HTTP completion, within
