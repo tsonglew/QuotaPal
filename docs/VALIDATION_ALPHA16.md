@@ -20,4 +20,8 @@
 
 ## 运行证据
 
-release lint／R8 构建与候选 CI 结果待记录；正式签名候选、模拟器升级及恢复的结果另行填写。当前只完成夹具和运行环境准备，不声明正式升级已通过。
+初始候选 31b7ebc 的 [CI 38035733101](https://github.com/tsonglew/QuotaPal/actions/runs/38035733101) 完整六组及 gate 成功。并行运行的 master f5edf96 在 API 37.0 被 Pixel Launcher 无响应弹窗遮挡，真实失败截图及系统日志见 [测试指南](TESTING.md#模拟器桌面弹窗隔离)。候选随后增加该已确认桌面变体的严格处理，必须重新运行 CI，不能沿用初始提交的成功结果。
+
+本机更新后的 debug／androidTest 编译成功，专用 API 31 模拟器上 WidgetRefreshActionDeviceTest 两项实际通过（4.838 秒），保留三组件进度、唯一请求及最终额度断言；本轮没有出现桌面弹窗，不能据此声称已实际执行弹窗关闭分支。本机独立 release 构建达到 600 秒预算后退出 124，不算通过；候选 minified 构建仍需 master 云端结果。
+
+正式签名候选、模拟器升级及恢复的结果另行填写。当前完成夹具、环境准备及 debug 定向回归，不声明正式升级已通过。

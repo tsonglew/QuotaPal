@@ -93,4 +93,6 @@ Android 17 专用 CI 使用 SDK 稳定模拟器并安装 Linux 运行依赖，�
 
 master 12c557b 的 [38032639377](https://github.com/tsonglew/QuotaPal/actions/runs/38032639377) 在 API 36 的真实组件点击测试失败。报告中刷新按钮实际可见、具有点击容器且布局完成，但所有节点 windowFocus=false；[失败截图](screenshots/emulator-quickstep-anr-api36.png) 明确显示系统 Quickstep 无响应弹窗挡住测试，尚未注入点击。这与先前 RemoteViews 手势竞争不同，保留失败记录，不把本轮算作成功。
 
-测试候选只在模拟器 ro.kernel.qemu=1、系统包 android 的活动窗口、完整标题 Quickstep isn't responding、系统默认 HOME 为 com.android.launcher3 均匹配时，保存截图并关闭一次该弹窗，随后继续原按钮可见性与真实点击断言。重复弹窗、未知弹窗及 QuotaPal 自身 ANR／崩溃不在处理范围，仍阻断测试。查询声明仅在 debug manifest，处理代码仅在 androidTest，不进入正式 APK。此处理需新的云端矩阵实际验证，不宣称已修复系统桌面的 ANR。
+master f5edf96 的 [38034462993](https://github.com/tsonglew/QuotaPal/actions/runs/38034462993) 又在 API 37.0 失败。[截图](screenshots/emulator-pixel-launcher-anr-api37.png) 明确显示 Pixel Launcher isn't responding，系统日志确认默认桌面 com.google.android.apps.nexuslauncher 输入超时；原 Quickstep 专用处理没有匹配此变体，窗口持续失去焦点，尚未注入点击。
+
+测试候选只在模拟器 ro.kernel.qemu=1、系统包 android 的活动窗口、完整标题与系统默认 HOME 对应时，保存截图并关闭一次该弹窗：com.android.launcher3 对应 Quickstep isn't responding，com.google.android.apps.nexuslauncher 对应 Pixel Launcher isn't responding。桌面必须带系统包标记，随后继续原按钮可见性与真实点击断言。重复弹窗、未知弹窗及 QuotaPal 自身 ANR／崩溃不在处理范围，仍阻断测试。查询声明仅在 debug manifest，处理代码仅在 androidTest，不进入正式 APK。此处理需新的云端矩阵实际验证，不宣称已修复系统桌面的 ANR。
