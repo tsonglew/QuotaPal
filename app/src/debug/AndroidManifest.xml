@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <queries>
+        <package android:name="com.android.launcher3" />
+    </queries>
     <application>
         <activity android:name=".WidgetTestHostActivity" android:exported="false" />
     </application>

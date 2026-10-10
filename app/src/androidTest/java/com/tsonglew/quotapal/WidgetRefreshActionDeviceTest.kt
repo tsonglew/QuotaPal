@@ -72,9 +72,12 @@ class WidgetRefreshActionDeviceTest {
                 var stableTarget: android.view.View? = null
                 var stableBounds: android.graphics.Rect? = null
                 var stableSince = 0L
+                var recoveredLauncherDialog = false
                 while (refreshBounds == null && android.os.SystemClock.elapsedRealtime() < clickDeadline) {
                     instrumentation.waitForIdleSync()
+                    var hasWindowFocus = false
                     scenario.onActivity { activity ->
+                        hasWindowFocus = activity.hasWindowFocus()
                         val views = descendants(activity.widgetView)
                         lastTree = views.joinToString("\n") {
                             "${it.javaClass.simpleName}: description=${it.contentDescription}, clickable=${it.hasOnClickListeners()}, parent=${it.parent?.javaClass?.simpleName}, shown=${it.isShown}, layoutRequested=${it.isLayoutRequested}, size=${it.width}x${it.height}, windowFocus=${it.hasWindowFocus()}"
@@ -115,6 +118,9 @@ class WidgetRefreshActionDeviceTest {
                                 stableBounds = null
                             }
                         }
+                    }
+                    if (!hasWindowFocus && !recoveredLauncherDialog) {
+                        recoveredLauncherDialog = dismissQuickstepAnrOnEmulator(instrumentation)
                     }
                     if (refreshBounds == null) Thread.sleep(50)
                 }
