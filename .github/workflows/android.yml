@@ -1,7 +1,7 @@
 name: Android build and tests
 on:
   push:
-    branches: [master, 'codex/**']
+    branches: [master]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -194,7 +194,7 @@ jobs:
   ci:
     name: Android CI gate
     needs: [delivery, build, device-tests]
-    if: always()
+    if: always() && !cancelled()
     runs-on: ubuntu-latest
     steps:
       - name: Require every build and device check

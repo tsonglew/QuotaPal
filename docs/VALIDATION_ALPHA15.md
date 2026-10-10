@@ -19,7 +19,7 @@
 - 诊断独立 Kotlin／JUnit：10 项通过，涵盖容量轮转、跨实例保留、存储失败、7 天裁剪、时间回拨、清除、异常脱敏与系统异常处理保留。
 - 交付脚本：22 项通过，新增签名验证模式不调用 GitHub、验证模式仍拒绝指纹不符。
 - actionlint 1.7.12：通过（本机未安装 ShellCheck，使用 -shellcheck=''；CI 仍运行完整 ShellCheck）。`bash -n scripts/publish_release.sh`、`git diff --check` 通过。
-- release lint：通过，0 错误。首次 R8 构建在 300 秒命令预算内未结束，已使用更长预算继续验证，minified APK 尚未完成。
+- release lint：通过，0 错误。首次 R8 构建在 300 秒命令预算内未结束；更长预算继续运行后 `assembleRelease` BUILD SUCCESSFUL（3m27s）。aapt2 检查 minified APK 的包名 com.tsonglew.quotapal、versionCode=15、versionName=0.1.0-alpha15、minSdk=29、targetSdk=36；无 debuggable 标记或 debug 测试宿主。
 - 本机 adb 设备列表为空。新增诊断预览／清除设备测试与现有组件测试的事件时序输出；设备执行结果待六版本 CI。
 
 ## 当前 CI 基线问题
@@ -31,3 +31,6 @@
 ## 保留的真实验收
 
 E03 的系统后台约束、E07／H04／I03 的 Samsung／小米 Launcher、E08 的 48 小时观察、E09 的七天自用及真实授权／续期保持未完成。签名环境配置不是实际签名、覆盖升级或公开发布成功的证据。
+
+
+PR [#10](https://github.com/tsonglew/QuotaPal/pull/10) 已创建并关联本任务，源提交 2699a6582429801ee836bc0c410924b6e3f6fa28；[CI 38018451947](https://github.com/tsonglew/QuotaPal/actions/runs/38018451947) 正在执行。重复分支 push 运行已取消，保留完整 PR 矩阵。
