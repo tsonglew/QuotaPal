@@ -1,0 +1,81 @@
+name: Android release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.version.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate release tag and source
+        id: version
+        env:
+          TAG: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          test "$REF_TYPE" = tag
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+          tag = os.environ['TAG']
+          assert re.fullmatch(r'v\d+\.\d+\.\d+(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?', tag), 'Invalid version tag'
+          version = re.search(r'versionName\s*=\s*"([^"]+)"', Path('app/build.gradle.kts').read_text())[1]
+          assert tag == 'v' + version, 'Tag does not match Android versionName'
+          PY
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/master
+          echo "sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+  validate:
+    needs: prepare
+    uses: ./.github/workflows/android.yml
+    with:
+      ref: ${{ needs.prepare.outputs.sha }}
+      build-release: true
+  publish:
+    needs: [prepare, validate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: write
+      deployments: write
+    environment:
+      name: android-release
+      url: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+          sparse-checkout: scripts
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-release-unsigned
+          path: unsigned
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - run: sdkmanager 'build-tools;35.0.0'
+      - name: Sign, verify and publish APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
+          GH_REPO: ${{ github.repository }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_SIGNING_CERT_SHA256: ${{ vars.ANDROID_SIGNING_CERT_SHA256 }}
+        run: bash scripts/publish_release.sh

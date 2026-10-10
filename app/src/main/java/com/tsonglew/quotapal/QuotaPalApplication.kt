@@ -13,10 +13,16 @@ import com.tsonglew.quotapal.widget.SlimQuotaWidget
 import com.tsonglew.quotapal.widget.SlimQuotaWidgetReceiver
 import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
-class QuotaPalApplication : Application() {
+open class QuotaPalApplication : Application() {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    val api by lazy { CodexApi() }
+    private val mutableWallClockRevision = MutableStateFlow(0L)
+    val wallClockRevision = mutableWallClockRevision.asStateFlow()
+    fun wallClockChanged() { mutableWallClockRevision.update { it + 1 } }
+    open val api by lazy { CodexApi() }
     val settings by lazy { SettingsStore(this) }
     val repository by lazy {
         UsageRepository(api, CredentialVault(this), Room.databaseBuilder(this, QuotaDatabase::class.java, "quota.db").build().snapshots(), settings)

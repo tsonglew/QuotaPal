@@ -22,6 +22,8 @@ class WidgetTestHostActivity : Activity() {
     lateinit var widgetView: AppWidgetHostView
     var secondaryWidgetView: AppWidgetHostView? = null
         private set
+    var thirdWidgetView: AppWidgetHostView? = null
+        private set
     private var secondaryWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
     private lateinit var host: AppWidgetHost
     private lateinit var root: FrameLayout
@@ -32,8 +34,11 @@ class WidgetTestHostActivity : Activity() {
         super.onCreate(savedInstanceState)
         val width = intent.getIntExtra("width", 280)
         val height = intent.getIntExtra("height", 150)
-        host = AppWidgetHost(this, hostIds.incrementAndGet())
-        val (id, view) = bindWidget(width, height, intent.getBooleanExtra("slim", false))
+        host = AppWidgetHost(this, intent.getIntExtra("hostId", hostIds.incrementAndGet()))
+        val retainedId = intent.getIntExtra("existingWidgetId", AppWidgetManager.INVALID_APPWIDGET_ID)
+        val (id, view) = if (retainedId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+            bindWidget(width, height, intent.getBooleanExtra("slim", false))
+        } else retainedId to host.createView(this, retainedId, AppWidgetManager.getInstance(this).getAppWidgetInfo(retainedId))
         widgetId = id
         widgetView = view
         root = FrameLayout(this).apply {
@@ -69,12 +74,36 @@ class WidgetTestHostActivity : Activity() {
             ceil(height * density).toInt() + padding.top + padding.bottom, gravity)
     }
 
+    fun resizePrimaryWidget(width: Int, height: Int) {
+        // HostView subtracts default padding before notifying the provider.
+        // This helper's dimensions describe the widget content area.
+        val padding = AppWidgetHostView.getDefaultPaddingForWidget(this, widgetView.appWidgetInfo.provider, null)
+        val density = resources.displayMetrics.density
+        val outerWidth = width + ((padding.left + padding.right) / density).toInt()
+        val outerHeight = height + ((padding.top + padding.bottom) / density).toInt()
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            widgetView.updateAppWidgetSize(Bundle(), listOf(SizeF(outerWidth.toFloat(), outerHeight.toFloat())))
+        } else {
+            @Suppress("DEPRECATION")
+            widgetView.updateAppWidgetSize(Bundle(), outerWidth, outerHeight, outerWidth, outerHeight)
+        }
+        widgetView.layoutParams = widgetLayout(widgetView, width, height, Gravity.CENTER)
+    }
+
     fun addStandardWidget(): Int {
         check(secondaryWidgetView == null)
         val (id, view) = bindWidget(140, 150, false)
         secondaryWidgetId = id
         secondaryWidgetView = view
         root.addView(view, widgetLayout(view, 140, 150, Gravity.TOP or Gravity.CENTER_HORIZONTAL))
+        return id
+    }
+
+    fun addThirdWidget(): Int {
+        check(thirdWidgetView == null)
+        val (id, view) = bindWidget(280, 70, true)
+        thirdWidgetView = view
+        root.addView(view, widgetLayout(view, 280, 70, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
         return id
     }
 

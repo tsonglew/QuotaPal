@@ -1,0 +1,29 @@
+# alpha09 大字体组件回归
+
+2026-10-10，versionCode 9／0.1.0-alpha09。
+
+- 修复 Pixel Launcher 200% 字体下组件时间与刷新按钮被裁切的问题；大字体采用紧凑布局，保留额度、完整成功时间、刷新入口和文字状态。宽组件与高组件保留两个周期，完整含义通过无障碍描述提供。
+- Android 17／API 37／4 KB 原生 AppWidgetHost 定向回归通过（22.545 秒）：130×50、130×70、280×70、140×150、280×150、140×230；检查文字实际可见范围和省略号。额外覆盖 0%、100%、缺失用量、当前可用、无周期、受限与未连接。断言使用完整文本匹配，避免 0% 误匹配旧的 100%。
+- App 与测试 APK 构建、lint、47 项 JVM 回归通过；完整 16 项 Android 17 设备测试单轮全部通过（147.606 秒），包含真实刷新 PendingIntent 点击、三个组件共享一次请求、布局及生命周期回归。
+
+D09 继续保留：尚需实际 TalkBack 验证。实际小米手动刷新、后台清理后恢复、OEM 引导及长期自用待验收。alpha08 云端 Android 17 两组在就绪检查超时后清理卡住，最终因 30 分钟作业上限被取消；未执行 App 测试，不把本地 4 KB 结果当作云端 16 KB 成功。
+
+Pixel Launcher 原生桌面从正常字体切换至 200% 后，两种组件实际显示额度、完整成功时间和刷新符号；深浅色同时检查，截图 `.tools/alpha09-pixel17/font-2.0.png` 已查看。已恢复 font_scale=1.0。
+
+debug APK SHA-256：`f08570d23ea83c998bf9d3129ee4afd8b27dcb99980496376880469e5f3a408d`。
+
+CI 37987702971：交付、构建和 API 29／31／35／36 成功；37.0／37.2 在启动后 5 分钟框架就绪超时，随后一直停留清理，最终 cancelled。没有确认模拟器启动失败的底层原因。日志归档下载返回 403，未读取其内容。清理改为每条 adb 命令限时并终止 emulator，启动进程提前退出立即失败，启动日志同步输出到 job；新增真实挂起子进程被终止与退出码保留两项回归。
+
+## 持久化与外部进程恢复
+
+新增两阶段 LifecycleDeviceTest 和外部 lifecycle_smoke.sh。seed 在测试网络拦截器下连接合成账号，把凭据写入真实 Keystore、快照写入 Room，保存平台组件 ID、独立设置、成功时间与原 PID。外部 am force-stop 后 restore 要求 PID 已变化，初始化时恢复原账号与同一成功时间，重开 MainActivity 恢复一个唯一周期任务，重新监听同一平台组件 ID 并实际渲染已用 38%；没有向 API 获取替代快照。两阶段 API 37 测试通过（0.802／7.743 秒），E04 完成。普通设备套件不自行模拟进程死亡；该测试在普通套件跳过，由独立 CI harness 执行。
+
+Android 17 真实模拟器重启两阶段通过（2.620／19.114 秒）；从 git f4f4857 单独构建 alpha08、保留数据安装后 seed，再覆盖安装 alpha09，两阶段通过（0.666／8.652 秒）。升级断言确认 versionCode 从 8 增到 9；缓存时间、账号、独立组件设置、平台组件 ID 和唯一周期同步均恢复，未重取额度。D08 完成；不据此证明正式固定签名、OEM 或真实授权续期。
+
+新 CI 37991519575 的 Android 17 两组均失败。37.0 启动日志明确为 Unknown AVD name / 找不到 quotapal-ci.ini，清理已按时结束。显式统一 ANDROID_USER_HOME／ANDROID_EMULATOR_HOME／ANDROID_AVD_HOME，指定创建路径，启动前检查 ini 和 emulator -list-avds；本地相同目录规则创建 API 37 ARM64 AVD，ini 存在且 emulator 列出 quotapal-ci。云端 x86_64 仍待运行。路径规则依据 [Android 环境变量文档](https://developer.android.com/tools/variables)。
+
+CI 37991519575 最终：delivery／build 与 API 35／36 成功；API 29 的 200% 字体 130×50 时间裁切、API 31 的 130×70 示例标签省略；API 37 两组启动失败，统一 CI gate 正确失败。保留这些失败，不把先前 API 37 本地通过扩展为全部平台通过。紧凑字号进一步收紧，标准大字体额度与标题降低占用，仍保留全部文字裁切／省略断言，旧系统云端回归待运行。
+
+生命周期宿主改动后的五项 WidgetRenderTest 全部通过（110.148 秒）；后续为旧系统调整字号后的回归另行记录。PR 创建权限重新核对仍返回 403 Resource not accessible by integration，尚无新 PR。
+
+旧系统排版修订后，API 37 大字体六种尺寸与额度边界回归通过（18.715 秒），debug／测试 APK 构建、lint、actionlint、ShellCheck 通过；16 项交付脚本测试通过。API 29／31 与云端 AVD 目录修复待下一次矩阵。当前 debug APK SHA-256：`d8c8445734ce873109c48cf869ed81f1b2447f04e08bfeec3652226ada2dd99c`。

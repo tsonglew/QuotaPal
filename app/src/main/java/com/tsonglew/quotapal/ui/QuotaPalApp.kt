@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tsonglew.quotapal.LoginState
 import com.tsonglew.quotapal.MainViewModel
+import com.tsonglew.quotapal.quotaApp
 import com.tsonglew.quotapal.data.*
 import com.tsonglew.quotapal.widget.QuotaWidgetReceiver
 import com.tsonglew.quotapal.widget.SlimQuotaWidgetReceiver
@@ -45,11 +46,13 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun QuotaPalApp(model: MainViewModel) {
+    val timeRevision by LocalContext.current.quotaApp.wallClockRevision.collectAsStateWithLifecycle()
     val state by model.state.collectAsStateWithLifecycle()
     val prefs by model.preferences.collectAsStateWithLifecycle()
     val login by model.login.collectAsStateWithLifecycle()
-    val clock by produceState(Instant.now().epochSecond) {
-        while (true) { delay(30_000); value = Instant.now().epochSecond }
+    val operationError by model.error.collectAsStateWithLifecycle()
+    val clock by produceState(Instant.now().epochSecond, timeRevision) {
+        while (true) { value = Instant.now().epochSecond; delay(30_000) }
     }
     var tab by rememberSaveable { mutableStateOf("quota") }
     QuotaTheme(prefs.theme) {
@@ -79,13 +82,18 @@ fun QuotaPalApp(model: MainViewModel) {
                 }
                 Spacer(Modifier.height(32.dp))
                 when (tab) {
-                    "quota" -> if (!state.initialized) CircularProgressIndicator() else Dashboard(state, prefs, model, clock)
+                    "quota" -> if (!state.initialized) CircularProgressIndicator() else key(timeRevision) { Dashboard(state, prefs, model, clock) }
                     "widgets" -> WidgetPage(state, prefs)
                     else -> SettingsPage(state, prefs, model)
                 }
                 Spacer(Modifier.height(28.dp))
             }
             }
+        }
+        operationError?.let { message ->
+            AlertDialog(onDismissRequest = model::dismissError,
+                title = { Text("操作未完成") }, text = { Text(message) },
+                confirmButton = { TextButton(onClick = model::dismissError) { Text("知道了") } })
         }
         login?.let { LoginDialog(it, model::cancelLogin, model::startLogin) }
     }
@@ -316,9 +324,11 @@ private fun SettingsPage(state: AppState, prefs: PreferencesState, model: MainVi
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(15L, 30L, 60L).forEach { minutes -> FilterChip(prefs.refreshMinutes == minutes, onClick = { model.refreshMinutes(minutes) }, label = { Text("$minutes 分钟", fontSize = 12.sp) }) }
             }
-            Text("后台刷新受系统省电与网络影响，可能延迟。", fontSize = 12.sp, lineHeight = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("后台刷新受系统省电与网络影响，可能延迟。持续失败时每轮最多尝试 3 次，之后等待下一周期或手动刷新。", fontSize = 12.sp, lineHeight = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+    Spacer(Modifier.height(18.dp))
+    BackgroundGuide()
     Spacer(Modifier.height(18.dp))
     Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surface) {
         Column(Modifier.fillMaxWidth().padding(20.dp)) {
@@ -330,6 +340,7 @@ private fun SettingsPage(state: AppState, prefs: PreferencesState, model: MainVi
             if (state.connected || state.demo) TextButton(onClick = { confirmLogout = true }, modifier = Modifier.testTag("logout-button")) { Text(if (state.demo) "退出示例模式" else "退出并清除本机数据", color = MaterialTheme.colorScheme.error) }
         }
     }
+    PrivacyNoticeEntry()
     Spacer(Modifier.height(24.dp))
     Text("QuotaPal ${com.tsonglew.quotapal.BuildConfig.VERSION_NAME}\n独立第三方工具 · 连接能力处于实验阶段\n应用仅获取额度；登录凭据的权限可能覆盖更多能力。", fontSize = 11.sp,
         lineHeight = 19.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -343,7 +354,7 @@ private fun SettingsPage(state: AppState, prefs: PreferencesState, model: MainVi
 private fun LoginDialog(login: LoginState, cancel: () -> Unit, retry: () -> Unit) {
     val context = LocalContext.current
     AlertDialog(onDismissRequest = cancel, title = { Text("连接 Codex") }, text = {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("在 OpenAI 页面完成设备登录。不要在 QuotaPal 输入账号密码。", lineHeight = 22.sp)
             Text("首次使用需在 ChatGPT 安全设置中启用设备码登录；工作区账号可能需要管理员开启。", fontSize = 12.sp,
                 lineHeight = 19.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -356,6 +367,7 @@ private fun LoginDialog(login: LoginState, cancel: () -> Unit, retry: () -> Unit
             }
             Text("设备登录与额度接口为实验性兼容接入。凭据加密保存在本机，应用不执行模型请求或消耗重置次数。", fontSize = 11.sp,
                 lineHeight = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            PrivacyNoticeEntry()
         }
     }, confirmButton = {
         if (login.error != null) TextButton(onClick = retry) { Text("重新获取") }

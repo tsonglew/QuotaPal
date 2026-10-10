@@ -32,24 +32,33 @@ class UsageRepository(
 ) {
     private val lock = Mutex()
     private val generation = AtomicLong(0)
+    // Accessed under lock; generation prevents a deadline crossing account changes.
+    private var retryGuard: Pair<Long, Long>? = null
     private val mutableState = MutableStateFlow(AppState())
     val state: StateFlow<AppState> = mutableState
 
     suspend fun initialize() = withContext(Dispatchers.IO) {
+        // Rendering the existing snapshot must not wait for an in-flight network request.
+        if (mutableState.value.initialized) return@withContext
         lock.withLock {
             if (mutableState.value.initialized) return@withLock
-            val prefs = settings.read()
-            if (prefs.demo) {
-                mutableState.value = AppState(initialized = true, snapshot = demoSnapshot(now()), demo = true)
-                return@withLock
-            }
+            var session: Session? = null
             try {
-                val session = vault.read()
+                val prefs = settings.read()
+                if (prefs.demo) {
+                    mutableState.value = AppState(initialized = true, snapshot = demoSnapshot(now()), demo = true)
+                    return@withLock
+                }
+                session = vault.read()
                 val snapshot = dao.read()?.takeIf { it.accountId == session?.accountId }?.let {
                     runCatching { AppJson.decodeFromString<UsageSnapshot>(it.json) }.getOrNull()
                 }
                 mutableState.value = AppState(true, session != null, snapshot, failure = prefs.lastFailure)
-            } catch (_: ApiFailure) { mutableState.value = AppState(initialized = true, failure = FailureKind.STORAGE) }
+            } catch (cancel: CancellationException) {
+                throw cancel
+            } catch (_: Exception) {
+                mutableState.value = AppState(initialized = true, connected = session != null, failure = FailureKind.STORAGE)
+            }
         }
     }
 
@@ -72,21 +81,32 @@ class UsageRepository(
         lock.withLock {
             if (ticket != generation.get()) return@withLock SyncResult.NO_ACCOUNT
             if (mutableState.value.demo) return@withLock SyncResult.SUCCESS
-            val prefs = settings.read()
-            val session = try { vault.read() } catch (_: ApiFailure) {
+            val prefs = try { settings.read() } catch (cancel: CancellationException) {
+                throw cancel
+            } catch (_: Exception) {
+                mutableState.update { it.copy(failure = FailureKind.STORAGE) }
+                return@withLock SyncResult.RETRY
+            }
+            val session = try { vault.read() } catch (cancel: CancellationException) {
+                throw cancel
+            } catch (_: ApiFailure) {
                 mutableState.update { it.copy(failure = FailureKind.STORAGE) }; return@withLock SyncResult.AUTH_REQUIRED
+            } catch (_: Exception) {
+                mutableState.update { it.copy(failure = FailureKind.STORAGE) }
+                return@withLock SyncResult.RETRY
             } ?: return@withLock SyncResult.NO_ACCOUNT
             if (prefs.lastFailure == FailureKind.AUTH && !force) return@withLock SyncResult.AUTH_REQUIRED
-            if (now() < prefs.retryAt) return@withLock SyncResult.DEFERRED
-            if (now() - prefs.lastAttemptAt < 10) {
+            val retryAt = maxOf(prefs.retryAt, retryGuard?.takeIf { it.first == ticket }?.second ?: 0)
+            if (now() < retryAt) return@withLock SyncResult.DEFERRED
+            if (now() - prefs.lastAttemptAt in 0L until 10L) {
                 // A concurrent caller can use the just-completed snapshot instead of retrying a worker later.
                 return@withLock if (prefs.lastFailure == null && mutableState.value.snapshot != null) SyncResult.SUCCESS else SyncResult.DEFERRED
             }
-            if (!force && prefs.lastFailure == null && mutableState.value.snapshot?.let { now() - it.fetchedAt < prefs.refreshMinutes * 60 } == true)
+            if (!force && prefs.lastFailure == null && mutableState.value.snapshot?.let { now() - it.fetchedAt in 0L until prefs.refreshMinutes * 60 } == true)
                 return@withLock SyncResult.DEFERRED
             mutableState.update { it.copy(syncing = true) }
-            settings.syncResult(prefs.lastFailure, prefs.retryAt, now())
             try {
+                settings.syncResult(prefs.lastFailure, prefs.retryAt, now())
                 var active = session
                 if (active.expiresAt <= now() + 60) {
                     active = api.renew(active)
@@ -103,12 +123,28 @@ class UsageRepository(
                 if (ticket != generation.get()) return@withLock SyncResult.NO_ACCOUNT
                 dao.write(SnapshotRecord(accountId = active.accountId, json = AppJson.encodeToString(snapshot)))
                 settings.syncResult(null)
+                retryGuard = null
                 mutableState.value = AppState(true, true, snapshot)
                 SyncResult.SUCCESS
-            } catch (cancel: CancellationException) { throw cancel }
+            } catch (cancel: CancellationException) {
+                // A bounded widget attempt may hand off to a worker. An interrupted request
+                // must not look like a successful recent attempt and suppress that continuation.
+                if (ticket == generation.get()) withContext(kotlinx.coroutines.NonCancellable) {
+                    // Preserve the original cancellation even if rollback storage is unavailable.
+                    try { settings.syncResult(prefs.lastFailure, prefs.retryAt, prefs.lastAttemptAt) }
+                    catch (_: Exception) { /* The request remains cancelled; no success is published. */ }
+                }
+                throw cancel
+            }
             catch (failure: ApiFailure) {
                 if (ticket == generation.get()) {
-                    settings.syncResult(failure.kind, failure.retryAt ?: 0)
+                    failure.retryAt?.let { deadline -> retryGuard = ticket to deadline }
+                    try { settings.syncResult(failure.kind, failure.retryAt ?: 0) }
+                    catch (cancel: CancellationException) { throw cancel }
+                    catch (_: Exception) {
+                        mutableState.update { it.copy(failure = FailureKind.STORAGE) }
+                        return@withLock SyncResult.RETRY
+                    }
                     mutableState.update { it.copy(failure = failure.kind) }
                 }
                 if (failure.kind in listOf(FailureKind.AUTH, FailureKind.FORBIDDEN, FailureKind.PROTOCOL)) SyncResult.AUTH_REQUIRED else SyncResult.RETRY

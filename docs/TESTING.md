@@ -7,6 +7,11 @@
 ```sh
 ./gradlew testDebugUnitTest lintDebug assembleDebug
 ./gradlew connectedDebugAndroidTest
+bash scripts/lifecycle_smoke.sh
+# The following probes change system state: owned test emulators only.
+bash scripts/system_time_smoke.sh
+bash scripts/network_smoke.sh
+bash scripts/power_smoke.sh
 ```
 
 - JVM：解析单／多窗口、缺失／非法百分比、重置时间、账号隔离、HTTP 错误、退避、并发请求、续期与退出时的旧响应。
@@ -18,7 +23,7 @@
 
 组件测试临时通过系统 shell 授予绑定权限，结束时撤销。测试宿主仅包含在 debug 变体中，未导出，不进入 release。实现依据 [Android widget host 文档](https://developer.android.com/develop/ui/views/appwidgets/host) 和 [AOSP appwidget shell 命令](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/cmds/appwidget/src/com/android/commands/appwidget/AppWidget.java)。宿主测试不能替代真实 Launcher、系统选择器和 OEM 验证。
 
-CI 产物 `android-build` 含 debug APK、单元测试与 lint 报告；`android-device-tests` 含设备测试报告和截图，保留 14 天。不上传凭据或真实账号数据。
+CI 产物 `android-build` 含 debug APK、单元测试与 lint 报告；设备矩阵配置 API 29、31、35、36、37.0 与 37.2／16KB；配置覆盖不等于全部通过，最新结果须核对 CI gate。`android-device-tests-api-<API>` 各含对应设备测试报告和截图，保留 14 天。不上传凭据或真实账号数据。模拟器矩阵不替代 OEM Launcher、真实授权与连续自用。
 
 ## 首次自用验收
 
@@ -49,6 +54,37 @@ CI 产物 `android-build` 含 debug APK、单元测试与 lint 报告；`android
 
 ## 长时间观察
 
+2026-10-10 自用设备反馈：小米 17 Ultra，Android 17（用户更正后的报告），当前 APK 已成功连接真实 Codex 账号。此反馈仅证明用户完成首次连接，不作为额度对照、续期、退出／重连、OEM 组件操作或连续使用时长的通过证据。
+
 48 小时后台观察和连续 7 天自用必须实际等待完成，不能用模拟器通过替代。记录实际刷新间隔、请求次数、失败与恢复、耗电和崩溃；Doze 与系统省电下允许刷新延迟，更新时间必须真实。
 
 强制停止后，以重新打开 App 能恢复为验收条件。Pixel/AOSP、Samsung、小米 Launcher 以及最低 Android 版本仍需分别执行。公开发布前继续完成签名、升级迁移、渠道与隐私政策验收。
+
+## 外部生命周期回归
+
+`lifecycle_smoke.sh` 使用测试包的合成账号拦截器，seed 写入真实 Keystore／Room 并绑定平台组件，外部停止进程后 restore 检查缓存时间、账号、同一组件 ID／独立设置、组件重新显示和唯一周期任务。普通测试套件跳过该两阶段测试，CI 在普通套件通过后单独执行，保存 lifecycle-seed.txt／lifecycle-restore.txt；am instrument 的退出码不能证明通过，脚本还要求 OK (1 test)。
+
+仅在测试模拟器上使用 `LIFECYCLE_RESTART=reboot` 执行实际设备重启，或先装旧版 debug APK、再用 `LIFECYCLE_RESTART=upgrade LIFECYCLE_APK=/absolute/path/new.apk` 验证覆盖升级。升级断言要求版本号实际增加，不接受同版本重装作为版本迁移证明。`LIFECYCLE_OUTPUT_DIR` 可改证据目录。测试结束清除合成账号及测试组件；失败后如需恢复可重跑完整 harness。真实账号和 OEM 验证仍单独执行。
+
+alpha10 增加 Worker 设备回归：合成离线／超时异常、503 与 429，检查原成功快照不变、每轮最多 3 次、Retry-After 阻止额外请求和新尝试恢复。此回归验证传输故障处理与 Worker 返回值，不代替设备实际断网、Doze 或 OEM 后台限制。
+
+alpha11 的 Android 17 CI 使用 `scripts/native_device_tests.py` 安装两 APK 并执行完整 runner，规避已观察到的 ddmlib 安装失败。原始报告保存在 `screenshots/native-instrumentation.txt`；至少 18 项实际通过、开始／结束状态配对及成功完成码是必要条件，Shell 退出 0 不代表测试通过。其他 API 继续使用 Gradle connected 流程。大字体失败时保存实际 View 几何及截图，方便定位旧系统占位布局问题。
+
+alpha12 新增 `scripts/system_time_smoke.sh`：仅在自建测试模拟器执行真实改时探针，检查时区／夏令时／跨天及回拨刷新，finally 恢复时间与自动设置。两个系统时间广播属于 [Android 隐式广播例外](https://developer.android.com/develop/background-work/background-tasks/broadcasts/broadcast-exceptions)，接收器只重绘缓存；不使用每分钟广播唤醒后台。
+
+`scripts/network_smoke.sh` 显式关闭自建模拟器的 Wi-Fi 与移动数据，要求 OS 从有效互联网变为无网络，再恢复原连接。检查真实 WorkManager 约束与调度：离线不执行请求、成功缓存保留，重连后只请求一次。用量响应由测试 runner 拦截，不把合成凭据发到外部。该探针普通套件默认跳过，CI 在系统时间探针后单独运行。仅“有 activeNetwork”不算恢复，必须满足 NET_CAPABILITY_VALIDATED；本地受代理限制的宿主须先配置其测试网络并在结束后恢复。
+
+TalkBack 专项仅在装有 Google TalkBack 的测试模拟器显式执行：`adb -e shell am instrument -w -e class com.tsonglew.quotapal.TalkBackDeviceTest -e talkbackProbe true com.tsonglew.quotapal.test/com.tsonglew.quotapal.QuotaTestRunner`。会临时启用真实 TalkBack 和 200% 字体，检查标准／紧凑组件的可访问树、焦点、双击和共享请求，并保存 talkback-*-focus／updated 截图；结束恢复原设置。普通套件按条件跳过，不以无 TalkBack 服务的模拟结果代替实际验证。
+
+
+## 省电恢复探针
+
+`scripts/power_smoke.sh` 仅用于受控模拟器；API 29 CI 在网络探针后执行。它在隔离 Wi-Fi／移动网络的合成夹具生命周期内切换深度 Doze、系统省电及 RUN_ANY_IN_BACKGROUND 限制，确认 JobScheduler 的 `readyNotDozing=false`／`readyNotRestrictedInBg=false`，退出限制并替换进程后核对缓存、组件与唯一周期调度恢复。原 forced-idle、deep 开关、屏幕、电池、省电、app-op 和网络状态在结束时恢复。它不证明 Doze 单独引起的延迟，也不替代 48 小时的请求次数和耗电观察。
+
+## 当前验证边界
+
+alpha14 的刷新存储故障及同进程限流保护由 JVM 故障注入覆盖；七项页面／手动刷新／Worker 设备回归通过。Worker 限流夹具使用短 Retry-After 并等待真实截止时间，不再靠清除磁盘截止字段冒充过期。
+
+Android 17 专用 CI 使用 SDK 稳定模拟器并安装 Linux 运行依赖，保留 API 37.0／37.2 系统镜像与完整原生 runner。AVD 根 ini 明确使用整数主版本 target=android-37，系统镜像路径不变，使用默认 software 图形路径。曾测试的 37.1.11 固定及 Vulkan composition 强开已撤回；失败对照见 [alpha14 验证](VALIDATION_ALPHA14.md)。
+
+[运行 38007906590](https://github.com/tsonglew/QuotaPal/actions/runs/38007906590) 的构建、单元测试、lint、产物校验、六版本设备矩阵与统一 gate 全部通过。Android 17 普通／16KB 两组各 18 项实际普通测试及四个独立探针通过；启动后实际断言 guest SDK=37，16KB job 的 PAGE_SIZE 必须等于 16384。保留三组件真实触摸刷新、单请求与刷新中反馈断言，以及尺寸换算后 provider 实收尺寸检查。此证据不代替 OEM／长期运行／真实认证生命周期或正式签名发布验收。

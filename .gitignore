@@ -11,3 +11,5 @@ artifacts/
 captures/
 *.hprof
 .idea/
+__pycache__/
+*.py[cod]

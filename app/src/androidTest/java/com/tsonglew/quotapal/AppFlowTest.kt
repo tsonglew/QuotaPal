@@ -4,6 +4,8 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.runBlocking
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -11,6 +13,10 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class AppFlowTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+    @Before fun startDisconnected() {
+        runBlocking { compose.activity.quotaApp.repository.logout() }
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag("connect-button").fetchSemanticsNodes().isNotEmpty() }
+    }
     @Test fun demoThemeWidgetAndLogoutFlow() {
         compose.onNodeWithTag("demo-button").performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithTag("dashboard").fetchSemanticsNodes().isNotEmpty() }
@@ -34,6 +40,36 @@ class AppFlowTest {
         compose.onNodeWithTag("connect-button").assertExists()
         screenshot("welcome-dark")
     }
+    @Test fun backgroundGuideCanSwitchBrandsAndCollapse() {
+        compose.onNodeWithTag("tab-settings").performClick()
+        compose.onNodeWithTag("background-guide-toggle").performScrollTo().performClick()
+        compose.onNodeWithTag("background-brand-picker").performScrollTo().performClick()
+        compose.onNodeWithText("小米 / Redmi / POCO").performClick()
+        compose.onNodeWithText("1. 允许自启动：", substring = true).performScrollTo().assertIsDisplayed()
+        screenshot("background-guide-xiaomi")
+        compose.onNodeWithTag("background-brand-picker").performScrollTo().performClick()
+        compose.onNodeWithText("Samsung").performClick()
+        compose.onNodeWithText("1. 排除休眠：", substring = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("background-app-settings").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("background-guide-toggle").performScrollTo().performClick()
+        compose.onNodeWithTag("background-brand-picker").assertDoesNotExist()
+    }
+
+    @Test fun privacyNoticeIsAvailableOfflineInSettingsAndBeforeLogin() {
+        compose.onNodeWithTag("tab-settings").performClick()
+        compose.onNodeWithTag("privacy-notice-button").performScrollTo().performClick()
+        compose.onNodeWithTag("privacy-notice-text").assertTextContains("额度缓存本身不是加密数据库", substring = true)
+        saveDeviceScreenshot(compose.activity, "privacy-notice", compose.onNode(isDialog()).captureToImage().asAndroidBitmap())
+        compose.onNodeWithTag("privacy-notice-close").performClick()
+        compose.onNodeWithTag("privacy-notice-text").assertDoesNotExist()
+        compose.onNodeWithTag("tab-quota").performClick()
+        compose.onNodeWithTag("connect-button").performClick()
+        compose.onNodeWithTag("privacy-notice-button").performScrollTo().performClick()
+        compose.onNodeWithTag("privacy-notice-text").assertTextContains("此操作不撤销远程授权", substring = true)
+        compose.onNodeWithTag("privacy-notice-close").performClick()
+        compose.onNodeWithText("取消", substring = false).performClick()
+    }
+
     private fun screenshot(name: String) {
         compose.waitForIdle()
         saveDeviceScreenshot(compose.activity, name, compose.onRoot().captureToImage().asAndroidBitmap())
