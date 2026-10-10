@@ -139,3 +139,9 @@ python3 scripts/background_power_probe.py \
 正式 alpha16（源 `6ac605a`，完整 APK 哈希和证书见 [汇总](diagnostics/power-api31/doze/summary.json)）在专用模拟器、合成账号、直接 TLS 下完成约 977 秒观察。后台进程通过 `am kill` 回收，保持有效默认网络；任务周期 900,000 ms、首次周期已结束，到期后 JobScheduler 仍显示 `readyNotDozing=false`，新增请求为零，成功缓存时间保持不变。JobScheduler 的 earliest 已过去约 2 分 15 秒；底层 Wi-Fi 仍 VALIDATED，但该应用 UID 的网络被标记 REASON_DOZE，符合系统空闲限制，不能将这里的 CONNECTIVITY 未满足误读为实验主动断网。解除 Doze 后未打开 App 或强制调度，原 WorkSpec 自行运行一次，period_count 从 1 增至 2，请求数 1→2，缓存 fetchedAt 从 1791627337 更新为 1791628489。
 
 [观察原文](diagnostics/power-api31/doze/observer.txt)、[到期快照](diagnostics/power-api31/doze/doze-due.json)、[约束](diagnostics/power-api31/doze/doze-due-constraints.txt)、[恢复快照](diagnostics/power-api31/doze/recovered.json) 均保留。恢复后桌面仍为剩余 62%，[实际截图](diagnostics/power-api31/doze/recovered-widget.png) 的更新时间为 18:34；crash buffer 为空，系统 lastanr 显示本次启动无 ANR，退出记录为实验的 kill background。此项仅证明该正式包、API 31、单次真实周期的 Doze 延迟与恢复，不替代其余省电模式、真实账号、OEM 或长期观察。
+
+## alpha17 后台受限诊断
+
+报告新增 `backgroundRestricted`，读取 Android ActivityManager 的实际限制标记。独立 API 31 模拟器通过真实 app-op 切换允许→受限→允许，预览报告分别出现 false→true→false，额度请求数不变；[原始回归](diagnostics/alpha17-background-restriction-report-api31.txt) 为 14.644 秒成功。测试结束恢复原 app-op，未触碰同机另一个正式 alpha16 后台观察设备。该字段表示系统后台限制状态，不声称可读取小米自启动、任务锁定或其他 OEM 私有开关。
+
+alpha17 本地验证：71 项 JVM 测试、lint 和构建通过；完整 AppFlow 五项通过（24.266 秒），见 [runner 原文](diagnostics/alpha17-appflow-api31.txt)，覆盖诊断反复预览／清除、真实后台限制切换、隐私、主题与后台引导。跨版本仍以对应提交的云端 CI 为准。

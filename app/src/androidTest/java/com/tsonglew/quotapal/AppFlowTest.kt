@@ -95,6 +95,36 @@ class AppFlowTest {
         org.junit.Assert.assertEquals("Diagnostics must not fetch quota", requestsBefore, app.usageRequests.get())
     }
 
+    @Test fun diagnosticsReflectActualBackgroundRestriction() {
+        val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+        fun shell(command: String): String = instrumentation.uiAutomation.executeShellCommand(command).use { descriptor ->
+            java.io.FileInputStream(descriptor.fileDescriptor).use { it.readBytes().decodeToString().trim() }
+        }
+        org.junit.Assume.assumeTrue("Owned emulator only", shell("getprop ro.kernel.qemu") == "1")
+        val packageName = compose.activity.packageName
+        val original = shell("cmd appops get $packageName RUN_ANY_IN_BACKGROUND")
+        org.junit.Assume.assumeTrue("Preserve existing restrictions", original.contains("No operations.") ||
+            Regex("RUN_ANY_IN_BACKGROUND: (allow|default)").containsMatchIn(original))
+        val restore = if (original.contains("RUN_ANY_IN_BACKGROUND: allow")) "allow" else "default"
+        val activity = compose.activity.getSystemService(android.app.ActivityManager::class.java)
+        val app = compose.activity.quotaApp as TestQuotaApplication
+        val before = app.usageRequests.get()
+        compose.onNodeWithTag("tab-settings").performClick()
+        try {
+            listOf(false, true, false).forEach { restricted ->
+                shell("cmd appops set $packageName RUN_ANY_IN_BACKGROUND ${if (restricted) "ignore" else "allow"}")
+                compose.waitUntil(10_000) { activity.isBackgroundRestricted == restricted }
+                compose.onNodeWithTag("diagnostics-preview").performScrollTo().performClick()
+                compose.waitUntil(10_000) { compose.onAllNodesWithTag("diagnostics-report").fetchSemanticsNodes().isNotEmpty() }
+                compose.onNodeWithTag("diagnostics-report").assertTextContains("backgroundRestricted=$restricted", substring = true)
+                compose.onNodeWithTag("diagnostics-close").performClick()
+            }
+            org.junit.Assert.assertEquals("Diagnostics must not fetch quota", before, app.usageRequests.get())
+        } finally {
+            shell("cmd appops set $packageName RUN_ANY_IN_BACKGROUND $restore")
+        }
+    }
+
     private fun screenshot(name: String) {
         compose.waitForIdle()
         saveDeviceScreenshot(compose.activity, name, compose.onRoot().captureToImage().asAndroidBitmap())
