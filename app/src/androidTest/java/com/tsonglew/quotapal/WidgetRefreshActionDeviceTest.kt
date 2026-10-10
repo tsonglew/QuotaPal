@@ -44,7 +44,12 @@ class WidgetRefreshActionDeviceTest {
                         }
                         if (!matched) Thread.sleep(50)
                     }
-                    org.junit.Assert.assertTrue("All three widgets across both providers must show $expected", matched)
+                    var actual = ""
+                    scenario.onActivity { activity ->
+                        actual = listOf(activity.widgetView, requireNotNull(activity.secondaryWidgetView), requireNotNull(activity.thirdWidgetView))
+                            .joinToString(" | ") { labels(it).joinToString { label -> label.text.toString() } }
+                    }
+                    org.junit.Assert.assertTrue("All three widgets must show $expected; actual=$actual; requests=${app.usageRequests.get()}; state=${app.repository.state.value}", matched)
                 }
                 awaitBoth("62%")
                 val before = app.usageRequests.get()
@@ -59,9 +64,9 @@ class WidgetRefreshActionDeviceTest {
                         (0 until view.childCount).flatMap { descendants(view.getChildAt(it)) }
                     } else emptyList()
                 val clickDeadline = android.os.SystemClock.elapsedRealtime() + 20_000
-                var clicked = false
+                var refreshBounds: android.graphics.Rect? = null
                 var lastTree = ""
-                while (!clicked && android.os.SystemClock.elapsedRealtime() < clickDeadline) {
+                while (refreshBounds == null && android.os.SystemClock.elapsedRealtime() < clickDeadline) {
                     scenario.onActivity { activity ->
                         val views = descendants(activity.widgetView)
                         lastTree = views.joinToString("\n") {
@@ -69,23 +74,34 @@ class WidgetRefreshActionDeviceTest {
                         }
                         val actions = views.filter { it.contentDescription?.toString() == "刷新额度" }
                         org.junit.Assert.assertTrue("Refresh semantics must be unique\n$lastTree", actions.size <= 1)
-                        val action = actions.singleOrNull()
-                        if (action != null) {
-                            var refresh: android.view.View = action
-                            // Glance may attach the PendingIntent to a parent wrapper.
-                            while (!refresh.hasOnClickListeners() && refresh.parent is android.view.View) {
-                                refresh = refresh.parent as android.view.View
-                            }
-                            if (refresh.hasOnClickListeners()) {
-                                org.junit.Assert.assertTrue("Refresh must invoke the RemoteViews PendingIntent", refresh.performClick())
-                                refresh.performClick()
-                                clicked = true
+                        actions.singleOrNull()?.let { action ->
+                            val bounds = android.graphics.Rect()
+                            if (action.isShown && action.getGlobalVisibleRect(bounds) && !bounds.isEmpty) {
+                                refreshBounds = bounds
                             }
                         }
                     }
-                    if (!clicked) Thread.sleep(50)
+                    if (refreshBounds == null) Thread.sleep(50)
                 }
-                org.junit.Assert.assertTrue("Refresh action must become clickable\n$lastTree", clicked)
+                org.junit.Assert.assertNotNull("Refresh action must become visible\n$lastTree", refreshBounds)
+                val bounds = requireNotNull(refreshBounds)
+                fun tapRefresh() {
+                    val downTime = android.os.SystemClock.uptimeMillis()
+                    for (eventAction in listOf(android.view.MotionEvent.ACTION_DOWN, android.view.MotionEvent.ACTION_UP)) {
+                        val event = android.view.MotionEvent.obtain(downTime, android.os.SystemClock.uptimeMillis(),
+                            eventAction, bounds.exactCenterX(), bounds.exactCenterY(), 0)
+                        event.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+                        try {
+                            org.junit.Assert.assertTrue("Real refresh touch must be delivered",
+                                instrumentation.uiAutomation.injectInputEvent(event, true))
+                        } finally { event.recycle() }
+                    }
+                }
+                // A real touch targets Glance's action even when its semantic wrapper
+                // and PendingIntent live on different nodes. Ancestor performClick can
+                // accidentally invoke the widget's open-App action instead.
+                tapRefresh()
+                tapRefresh()
                 try {
                     // Observe actual progress before permitting HTTP completion, within
                     // the production action's eight-second immediate-request budget.

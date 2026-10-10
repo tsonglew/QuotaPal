@@ -75,11 +75,17 @@ class WidgetTestHostActivity : Activity() {
     }
 
     fun resizePrimaryWidget(width: Int, height: Int) {
+        // HostView subtracts default padding before notifying the provider.
+        // This helper's dimensions describe the widget content area.
+        val padding = AppWidgetHostView.getDefaultPaddingForWidget(this, widgetView.appWidgetInfo.provider, null)
+        val density = resources.displayMetrics.density
+        val outerWidth = width + ((padding.left + padding.right) / density).toInt()
+        val outerHeight = height + ((padding.top + padding.bottom) / density).toInt()
         if (android.os.Build.VERSION.SDK_INT >= 31) {
-            widgetView.updateAppWidgetSize(Bundle(), listOf(SizeF(width.toFloat(), height.toFloat())))
+            widgetView.updateAppWidgetSize(Bundle(), listOf(SizeF(outerWidth.toFloat(), outerHeight.toFloat())))
         } else {
             @Suppress("DEPRECATION")
-            widgetView.updateAppWidgetSize(Bundle(), width, height, width, height)
+            widgetView.updateAppWidgetSize(Bundle(), outerWidth, outerHeight, outerWidth, outerHeight)
         }
         widgetView.layoutParams = widgetLayout(widgetView, width, height, Gravity.CENTER)
     }

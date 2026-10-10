@@ -35,3 +35,7 @@ CI 38002272484 全部终态：API 29／31／35／36 成功，37.0／37.2 在补�
 - CI 38005242748 全部设备终态：29／31／36 成功；35 真实点击已通过入口查找，但固定 2 秒响应窗口未观察到三组件刷新中。测试改为可控 HTTP 响应闸门，6 秒内验证三个组件的刷新中与唯一待处理请求后才释放响应（闸门最多 7 秒，保留生产 8 秒立即请求预算），finally 释放；本地 API 35 完整 18 项普通套件通过（113.127 秒）。37 两组 Vulkan=1 已确认、compositor 初始化已越过，但 SurfaceFlinger 在 libGLESv2_angle 的 FindAndAllocateCompatibleMemory／AllocateBufferMemory 路径反复 SIGABRT，系统准备超时；没有进入 App 测试，不计 E06。
 
 - Android 17 新对照只将 AVD 根 target 明确为 android-37，保留原 37.0 ARM64 系统镜像并恢复默认 software 渲染（无 Vulkan composition／GuestUsesAngle 强开）。实际 API level=37、Vulkan=1、GlDirectMem=1、HasSharedSlotsHostMemoryAllocator=1；框架准备通过，guest SDK=37、PAGE_SIZE=4096，完整 18 项普通套件通过（170.281 秒），包含最新可控响应的真实三组件点击刷新测试。准备以相同元数据修正进入云端 x86_64／16KB；新增 guest SDK／页面大小实际检查，E06 仍未完成。
+
+- CI 38006708030 设备全部终态：31／35／36／37.2 成功，37.2 实际 guest SDK=37、PAGE_SIZE=16384，完整 18 项普通测试与四个独立探针通过；37.0 实际 SDK=37、PAGE_SIZE=4096，17 项普通测试通过，唯一失败为三组件刷新中观察。两组实际 Vulkan／GlDirectMem／HasSharedSlotsHostMemoryAllocator 均为 1，AVD 主版本元数据修正已使系统进入 App 测试；统一 gate 因 29／37.0 测试失败继续不通过，E06 不勾选。
+
+- API 29 缩放失败核对平台源码：HostView 两种 updateAppWidgetSize API 会扣除默认 padding，测试宿主却传入内容尺寸。修正所有 API 的宿主尺寸换算，新增 provider 实收尺寸断言及实际文本／options 失败信息；API 35 首轮新断言明确捕获 140 被扣成 124，修正后通过。刷新测试改为向唯一可见刷新语义区域实际注入两次触摸，避免沿父级 performClick 误调用打开 App 动作，保留刷新中、三组件 83%、单请求及唯一周期任务断言。两处变更的三项针对性设备回归：API 35 全部通过（9.28 秒），API 37 全部通过（25.935 秒）；API 29 与云端仍待新候选验证。

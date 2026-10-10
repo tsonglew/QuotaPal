@@ -124,12 +124,23 @@ class WidgetRenderTest {
                         }
                         if (!matched) Thread.sleep(100)
                     }
-                    assertTrue("Resized RemoteViews must render the requested quota layout", matched)
+                    var actual = ""
+                    scenario.onActivity { actual = text(it.widgetView) }
+                    val options = android.appwidget.AppWidgetManager.getInstance(context).getAppWidgetOptions(removedId)
+                    assertTrue("Resized RemoteViews expected $expected, second=$secondVisible; actual=$actual; options=$options", matched)
                 }
                 awaitQuota("38%", true)
-                scenario.onActivity { it.resizePrimaryWidget(140, 230) }
+                fun resize(width: Int, height: Int) {
+                    scenario.onActivity { it.resizePrimaryWidget(width, height) }
+                    val options = android.appwidget.AppWidgetManager.getInstance(context).getAppWidgetOptions(removedId)
+                    assertEquals("Provider must receive the requested content width", width,
+                        options.getInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH))
+                    assertEquals("Provider must receive the requested content height", height,
+                        options.getInt(android.appwidget.AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT))
+                }
+                resize(140, 230)
                 awaitQuota("38%", true)
-                scenario.onActivity { it.resizePrimaryWidget(140, 150) }
+                resize(140, 150)
                 awaitQuota("38%", false)
             }
             val deadline = System.currentTimeMillis() + 20_000
