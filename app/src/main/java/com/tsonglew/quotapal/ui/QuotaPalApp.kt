@@ -43,6 +43,10 @@ import com.tsonglew.quotapal.widget.QuotaWidgetReceiver
 import com.tsonglew.quotapal.widget.SlimQuotaWidgetReceiver
 import java.time.Instant
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import com.tsonglew.quotapal.diagnostics.DiagnosticEvent
 
 @Composable
 fun QuotaPalApp(model: MainViewModel) {
@@ -55,6 +59,20 @@ fun QuotaPalApp(model: MainViewModel) {
         while (true) { value = Instant.now().epochSecond; delay(30_000) }
     }
     var tab by rememberSaveable { mutableStateOf("quota") }
+    val diagnosticApp = LocalContext.current.quotaApp
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    LaunchedEffect(tab, state, prefs, configuration) {
+        withContext(Dispatchers.IO) {
+            diagnosticApp.diagnostics.record(DiagnosticEvent.UI_STATE,
+                listOf("quota", "widgets", "settings").indexOf(tab).toLong(),
+                if (state.initialized) 1 else 0, if (state.connected) 1 else 0,
+                if (state.syncing) 1 else 0, if (state.snapshot != null) 1 else 0,
+                state.failure?.ordinal?.toLong() ?: -1,
+                configuration.screenWidthDp.toLong(), configuration.screenHeightDp.toLong(),
+                (configuration.fontScale * 100).toLong(), configuration.uiMode.toLong(),
+                if (prefs.showRemaining) 1 else 0, listOf("system", "light", "dark").indexOf(prefs.theme).toLong())
+        }
+    }
     QuotaTheme(prefs.theme) {
         Scaffold(containerColor = MaterialTheme.colorScheme.background, bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
@@ -340,6 +358,7 @@ private fun SettingsPage(state: AppState, prefs: PreferencesState, model: MainVi
             if (state.connected || state.demo) TextButton(onClick = { confirmLogout = true }, modifier = Modifier.testTag("logout-button")) { Text(if (state.demo) "退出示例模式" else "退出并清除本机数据", color = MaterialTheme.colorScheme.error) }
         }
     }
+    DiagnosticEntry()
     PrivacyNoticeEntry()
     Spacer(Modifier.height(24.dp))
     Text("QuotaPal ${com.tsonglew.quotapal.BuildConfig.VERSION_NAME}\n独立第三方工具 · 连接能力处于实验阶段\n应用仅获取额度；登录凭据的权限可能覆盖更多能力。", fontSize = 11.sp,
@@ -367,7 +386,8 @@ private fun LoginDialog(login: LoginState, cancel: () -> Unit, retry: () -> Unit
             }
             Text("设备登录与额度接口为实验性兼容接入。凭据加密保存在本机，应用不执行模型请求或消耗重置次数。", fontSize = 11.sp,
                 lineHeight = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            PrivacyNoticeEntry()
+            DiagnosticEntry()
+    PrivacyNoticeEntry()
         }
     }, confirmButton = {
         if (login.error != null) TextButton(onClick = retry) { Text("重新获取") }
@@ -375,4 +395,47 @@ private fun LoginDialog(login: LoginState, cancel: () -> Unit, retry: () -> Unit
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(CodexApi.VERIFICATION_URL)))
         }) { Text("打开 OpenAI 登录页") }
     }, dismissButton = { TextButton(onClick = cancel) { Text("取消") } })
+}
+
+@Composable
+private fun DiagnosticEntry() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var report by remember { mutableStateOf<String?>(null) }
+    var failed by remember { mutableStateOf(false) }
+    Text("问题排查", fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 18.dp))
+    Text("本机保留最近 200 条事件和 7 天按小时统计，不自动上传。复现问题后可预览并分享给维护者。", fontSize = 12.sp)
+    TextButton(onClick = {
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val app = context.quotaApp
+                    val power = context.getSystemService(android.os.PowerManager::class.java)
+                    val network = context.getSystemService(android.net.ConnectivityManager::class.java)
+                    val caps = network.getNetworkCapabilities(network.activeNetwork)
+                    "QuotaPal ${com.tsonglew.quotapal.BuildConfig.VERSION_NAME} diagnostic schema=1\n" +
+                        "Android SDK=${android.os.Build.VERSION.SDK_INT}\n" +
+                        "powerSave=${power.isPowerSaveMode} idle=${power.isDeviceIdleMode} batteryExempt=${power.isIgnoringBatteryOptimizations(context.packageName)}\n" +
+                        "networkValidated=${caps?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED)}\n" +
+                        com.tsonglew.quotapal.sync.SyncScheduler.diagnosticReport(context) +
+                        app.diagnostics.report()
+                }
+            }
+            result.onSuccess { report = it }.onFailure { failed = true }
+        }
+    }, modifier = Modifier.testTag("diagnostics-preview")) { Text("预览诊断报告") }
+    TextButton(onClick = { scope.launch { val result = withContext(Dispatchers.IO) { runCatching { context.quotaApp.diagnostics.clear() } }; result.onFailure { failed = true } } }, modifier = Modifier.testTag("diagnostics-clear")) { Text("清除诊断记录") }
+    report?.let { text ->
+        AlertDialog(onDismissRequest = { report = null }, title = { Text("诊断报告") },
+            text = { SelectionContainer { Text(text, fontSize = 11.sp, modifier = Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()).testTag("diagnostics-report")) } },
+            confirmButton = { TextButton(onClick = {
+                runCatching { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text)
+                }, "分享诊断报告")) }.onFailure { failed = true }
+            }) { Text("分享") } },
+            dismissButton = { TextButton(onClick = { report = null }, modifier = Modifier.testTag("diagnostics-close")) { Text("关闭") } })
+    }
+    if (failed) AlertDialog(onDismissRequest = { failed = false }, title = { Text("诊断操作未完成") },
+        text = { Text("请检查存储空间或分享应用后重试。") },
+        confirmButton = { TextButton(onClick = { failed = false }) { Text("知道了") } })
 }

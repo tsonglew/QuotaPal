@@ -1,6 +1,6 @@
 # QuotaPal 发布素材与帮助
 
-本文准备产品身份、简介、现有视觉素材和使用帮助，不表示已经公开发布。固定签名、发布渠道和真实账号接入范围仍由发布 checklist 单独验收。
+本文准备产品身份、简介、现有视觉素材和使用帮助，不表示已经公开发布。公开渠道已确定为 GitHub Releases APK；固定签名与真实账号接入范围仍由发布 checklist 单独验收。
 
 ## 产品身份与简介
 
@@ -21,7 +21,7 @@
 - 宣传预览：[quotapal-preview.png](assets/quotapal-preview.png)，[制作说明](assets/preview-generation.md)。这是基于原生截图合成的展示图，不替代实际设备截图。
 - 无障碍验证截图：[标准组件焦点](screenshots/talkback-standard-focus.png)、[紧凑组件更新](screenshots/talkback-slim-updated.png)，来源见 [alpha11](VALIDATION_ALPHA11.md)。
 
-渠道确定后，另按该渠道尺寸和格式要求导出图标与截图；不把宣传合成图描述为未经处理的真机画面。
+GitHub Release 说明使用现有图标与示例截图链接；图像来源与版本见索引，不把宣传合成图描述为未经处理的真机画面。
 
 ## 使用帮助
 
@@ -35,3 +35,14 @@
 8. 退出清除本机凭据及账号缓存，并让组件回到未连接状态。远程授权不会因此自动撤销；详见 [隐私说明](PRIVACY.md)。
 
 报告问题时可提供 App 版本、手机型号／Android 版本、组件类型、最后成功时间和操作步骤。不要发送 token、设备码或登录凭据；诊断导出仍应自行检查是否含个人信息。
+
+
+## GitHub APK 安装与更新
+
+1. 从 [QuotaPal Releases](https://github.com/tsonglew/QuotaPal/releases) 选择版本，实验版本带 Pre-release 标记；只有附件中实际存在的 APK 才可下载，本文不表示已有正式签名版本。
+2. 下载 QuotaPal-版本.apk、SHA256SUMS 和 provenance.json；在电脑上可运行 `shasum -a 256 文件名.apk`，核对对应 SHA-256。哈希用于检查下载完整性，签名指纹与源提交记录在 provenance.json。
+3. 用手机打开 APK，按 Android 提示允许当前下载／文件应用安装来自此来源的应用，再确认安装。安装后打开 QuotaPal；不需要 root。
+4. 同包名、兼容正式签名且 versionCode 更高的后续版本可覆盖安装，保留本机数据。不要随意安装旧版本；签名不兼容或降级时由系统拒绝。CI debug 版切换正式签名通常需先卸载，再安装并重新连接。
+5. 当前无自动安装功能。更新前查看版本说明中的已知限制；发布异常可先保留现用版本并在 Issues 反馈，不移动或替换已公开版本 tag。
+
+排查问题时，从设置 → 问题排查预览诊断报告，确认后再主动分享。报告含最近 200 条事件及 7 天统计；详细字段和 48 小时／7 天观察步骤见 [支持说明](SUPPORT.md)。

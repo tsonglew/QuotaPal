@@ -49,7 +49,7 @@ class WidgetRefreshActionDeviceTest {
                         actual = listOf(activity.widgetView, requireNotNull(activity.secondaryWidgetView), requireNotNull(activity.thirdWidgetView))
                             .joinToString(" | ") { labels(it).joinToString { label -> label.text.toString() } }
                     }
-                    org.junit.Assert.assertTrue("All three widgets must show $expected; actual=$actual; requests=${app.usageRequests.get()}; state=${app.repository.state.value}", matched)
+                    org.junit.Assert.assertTrue("All three widgets must show $expected; actual=$actual; requests=${app.usageRequests.get()}; state=${app.repository.state.value}; diagnostics=${app.diagnostics.report()}", matched)
                 }
                 awaitBoth("62%")
                 val before = app.usageRequests.get()

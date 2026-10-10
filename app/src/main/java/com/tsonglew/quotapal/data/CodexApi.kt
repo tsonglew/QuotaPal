@@ -1,5 +1,6 @@
 package com.tsonglew.quotapal.data
 
+import com.tsonglew.quotapal.diagnostics.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.*
 import okhttp3.*
@@ -25,6 +26,7 @@ class CodexApi(
     private val authBase: String = "https://auth.openai.com",
     private val usageUrl: String = "https://chatgpt.com/backend-api/wham/usage",
     private val now: () -> Long = { Instant.now().epochSecond },
+    private val diagnostics: Diagnostics? = null,
 ) {
     companion object {
         // Public client identifier from openai/codex; not a client secret.
@@ -33,31 +35,39 @@ class CodexApi(
     }
 
     private data class Reply(val status: Int, val body: String, val retryAfter: String?)
-    private suspend fun send(request: Request): Reply = suspendCancellableCoroutine { cont ->
-        val call = client.newCall(request.newBuilder().header("User-Agent", "QuotaPal/0.1 Android")
-            .header("Accept", "application/json").build())
-        cont.invokeOnCancellation { call.cancel() }
-        call.enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                if (cont.isActive) cont.resumeWithException(ApiFailure(FailureKind.NETWORK))
-            }
-            override fun onResponse(call: Call, response: Response) {
-                response.use {
-                    try {
-                        val body = it.body ?: throw ApiFailure(FailureKind.PROTOCOL)
-                        val source = body.source()
-                        source.request(512 * 1024 + 1L)
-                        if (source.buffer.size > 512 * 1024) throw ApiFailure(FailureKind.PROTOCOL)
-                        val reply = Reply(it.code, source.readUtf8(), it.header("Retry-After"))
-                        if (cont.isActive) cont.resume(reply)
-                    } catch (_: IOException) {
-                        if (cont.isActive) cont.resumeWithException(ApiFailure(FailureKind.NETWORK))
-                    } catch (_: Exception) {
-                        if (cont.isActive) cont.resumeWithException(ApiFailure(FailureKind.PROTOCOL))
+    private suspend fun send(request: Request): Reply = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        suspendCancellableCoroutine { cont ->
+            val operation = if (request.url.toString() == usageUrl) 0L else 1L
+            val started = System.nanoTime()
+            diagnostics?.record(DiagnosticEvent.HTTP_START, operation)
+            val call = client.newCall(request.newBuilder().header("User-Agent", "QuotaPal/0.1 Android")
+                .header("Accept", "application/json").build())
+            cont.invokeOnCancellation { call.cancel() }
+            call.enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    diagnostics?.record(DiagnosticEvent.HTTP_NETWORK_FAILURE, operation, if (call.isCanceled()) 1 else 0)
+                    if (cont.isActive) cont.resumeWithException(ApiFailure(FailureKind.NETWORK))
+                }
+                override fun onResponse(call: Call, response: Response) {
+                    diagnostics?.record(DiagnosticEvent.HTTP_END, operation, response.code.toLong(), (System.nanoTime() - started) / 1_000_000)
+                    response.use {
+                        try {
+                            val body = it.body ?: throw ApiFailure(FailureKind.PROTOCOL)
+                            val source = body.source()
+                            source.request(512 * 1024 + 1L)
+                            if (source.buffer.size > 512 * 1024) throw ApiFailure(FailureKind.PROTOCOL)
+                            val reply = Reply(it.code, source.readUtf8(), it.header("Retry-After"))
+                            if (cont.isActive) cont.resume(reply)
+                        } catch (_: IOException) {
+                            diagnostics?.record(DiagnosticEvent.HTTP_NETWORK_FAILURE, operation, if (call.isCanceled()) 1 else 0)
+                            if (cont.isActive) cont.resumeWithException(ApiFailure(FailureKind.NETWORK))
+                        } catch (_: Exception) {
+                            if (cont.isActive) cont.resumeWithException(ApiFailure(FailureKind.PROTOCOL))
+                        }
                     }
                 }
-            }
-        })
+            })
+        }
     }
 
     private fun check(reply: Reply, tokenEndpoint: Boolean = false): String {

@@ -1,5 +1,6 @@
 package com.tsonglew.quotapal.data
 
+import com.tsonglew.quotapal.diagnostics.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +30,7 @@ class UsageRepository(
     private val dao: SnapshotDao,
     private val settings: SyncSettings,
     private val now: () -> Long = { Instant.now().epochSecond },
+    private val diagnostics: Diagnostics? = null,
 ) {
     private val lock = Mutex()
     private val generation = AtomicLong(0)
@@ -71,16 +73,19 @@ class UsageRepository(
             dao.write(SnapshotRecord(accountId = session.accountId, json = AppJson.encodeToString(snapshot)))
             settings.demo(false)
             settings.syncResult(null, lastAttemptAt = now())
+            diagnostics?.record(DiagnosticEvent.SNAPSHOT_SAVED)
             mutableState.value = AppState(true, true, snapshot)
         }
     }
 
     suspend fun refresh(force: Boolean = false): SyncResult = withContext(Dispatchers.IO) {
+        val started = System.nanoTime()
+        diagnostics?.record(DiagnosticEvent.REFRESH_START, if (force) 1 else 0)
         initialize()
         val ticket = generation.get()
-        lock.withLock {
+        val outcome = lock.withLock {
             if (ticket != generation.get()) return@withLock SyncResult.NO_ACCOUNT
-            if (mutableState.value.demo) return@withLock SyncResult.SUCCESS
+            if (mutableState.value.demo) { diagnostics?.record(DiagnosticEvent.SKIP_DEMO); return@withLock SyncResult.SUCCESS }
             val prefs = try { settings.read() } catch (cancel: CancellationException) {
                 throw cancel
             } catch (_: Exception) {
@@ -94,27 +99,30 @@ class UsageRepository(
             } catch (_: Exception) {
                 mutableState.update { it.copy(failure = FailureKind.STORAGE) }
                 return@withLock SyncResult.RETRY
-            } ?: return@withLock SyncResult.NO_ACCOUNT
-            if (prefs.lastFailure == FailureKind.AUTH && !force) return@withLock SyncResult.AUTH_REQUIRED
+            } ?: run { diagnostics?.record(DiagnosticEvent.SKIP_ACCOUNT); return@withLock SyncResult.NO_ACCOUNT }
+            if (prefs.lastFailure == FailureKind.AUTH && !force) { diagnostics?.record(DiagnosticEvent.SKIP_AUTH); return@withLock SyncResult.AUTH_REQUIRED }
             val retryAt = maxOf(prefs.retryAt, retryGuard?.takeIf { it.first == ticket }?.second ?: 0)
-            if (now() < retryAt) return@withLock SyncResult.DEFERRED
+            if (now() < retryAt) { diagnostics?.record(DiagnosticEvent.SKIP_BACKOFF, retryAt - now()); return@withLock SyncResult.DEFERRED }
             if (now() - prefs.lastAttemptAt in 0L until 10L) {
+                diagnostics?.record(DiagnosticEvent.SKIP_RECENT)
                 // A concurrent caller can use the just-completed snapshot instead of retrying a worker later.
                 return@withLock if (prefs.lastFailure == null && mutableState.value.snapshot != null) SyncResult.SUCCESS else SyncResult.DEFERRED
             }
             if (!force && prefs.lastFailure == null && mutableState.value.snapshot?.let { now() - it.fetchedAt in 0L until prefs.refreshMinutes * 60 } == true)
-                return@withLock SyncResult.DEFERRED
+                { diagnostics?.record(DiagnosticEvent.SKIP_FRESH); return@withLock SyncResult.DEFERRED }
             mutableState.update { it.copy(syncing = true) }
             try {
                 settings.syncResult(prefs.lastFailure, prefs.retryAt, now())
                 var active = session
                 if (active.expiresAt <= now() + 60) {
+                    diagnostics?.record(DiagnosticEvent.RENEW)
                     active = api.renew(active)
                     if (ticket != generation.get()) return@withLock SyncResult.NO_ACCOUNT
                     vault.write(active)
                 }
                 val snapshot = try { api.usage(active) } catch (failure: ApiFailure) {
                     if (failure.kind != FailureKind.AUTH) throw failure
+                    diagnostics?.record(DiagnosticEvent.RENEW)
                     active = api.renew(active)
                     if (ticket != generation.get()) return@withLock SyncResult.NO_ACCOUNT
                     vault.write(active)
@@ -124,9 +132,11 @@ class UsageRepository(
                 dao.write(SnapshotRecord(accountId = active.accountId, json = AppJson.encodeToString(snapshot)))
                 settings.syncResult(null)
                 retryGuard = null
+                diagnostics?.record(DiagnosticEvent.SNAPSHOT_SAVED)
                 mutableState.value = AppState(true, true, snapshot)
                 SyncResult.SUCCESS
             } catch (cancel: CancellationException) {
+                diagnostics?.record(DiagnosticEvent.REFRESH_CANCELLED)
                 // A bounded widget attempt may hand off to a worker. An interrupted request
                 // must not look like a successful recent attempt and suppress that continuation.
                 if (ticket == generation.get()) withContext(kotlinx.coroutines.NonCancellable) {
@@ -153,6 +163,10 @@ class UsageRepository(
                 SyncResult.RETRY
             } finally { mutableState.update { it.copy(syncing = false) } }
         }
+        diagnostics?.record(DiagnosticEvent.REFRESH_END, outcome.ordinal.toLong(),
+            (System.nanoTime() - started) / 1_000_000, mutableState.value.failure?.ordinal?.toLong() ?: -1,
+            mutableState.value.snapshot?.let { now() - it.fetchedAt } ?: -1)
+        outcome
     }
 
     suspend fun demo(snapshot: UsageSnapshot = demoSnapshot(now())) = withContext(Dispatchers.IO) {

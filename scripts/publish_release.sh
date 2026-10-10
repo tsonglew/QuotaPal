@@ -38,6 +38,7 @@ digest = hashlib.sha256(apk.read_bytes()).hexdigest()
 (apk.parent / 'SHA256SUMS').write_text(f'{digest}  {apk.name}\n')
 (apk.parent / 'provenance.json').write_text(json.dumps(dict(
     source_sha=os.environ['RELEASE_SHA'], tag=os.environ['RELEASE_TAG'],
+    mode='signing-check' if os.environ.get('RELEASE_SIGN_ONLY') == 'true' else 'release',
     version_code=metadata['elements'][0]['versionCode'], sha256=digest, signing_cert_sha256=actual), indent=2) + '\n')
 (apk.parent / 'release-notes.md').write_text(
     'Android 10+。Codex 额度监控与桌面小组件，实验性兼容接入。\n\n'
@@ -46,6 +47,10 @@ digest = hashlib.sha256(apk.read_bytes()).hexdigest()
     f"源提交：{os.environ['RELEASE_SHA']}\n\n"
     '安装前可使用 SHA256SUMS 核对 APK；签名指纹与来源见 provenance.json。\n')
 PY
+if [[ "${RELEASE_SIGN_ONLY:-false}" == true ]]; then
+  printf 'Verified fixed-signature APK for %s at commit %s; no Release published\n' "$RELEASE_TAG" "$RELEASE_SHA"
+  exit 0
+fi
 if draft="$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft 2>/dev/null)"; then
   test "$draft" = true || { echo 'Release already published; refusing to replace its assets' >&2; exit 1; }
 else

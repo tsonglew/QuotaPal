@@ -45,6 +45,15 @@ open class QuotaWidget : GlanceAppWidget() {
     @Composable
     private fun Content(state: AppState, remaining: Boolean, theme: String, context: Context) {
         val size = LocalSize.current
+        androidx.compose.runtime.LaunchedEffect(size, state, remaining, theme) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                context.quotaApp.diagnostics.record(com.tsonglew.quotapal.diagnostics.DiagnosticEvent.WIDGET_STATE,
+                    size.width.value.toLong(), size.height.value.toLong(),
+                    (context.resources.configuration.fontScale * 100).toLong(),
+                    if (state.snapshot != null) 1 else 0, if (state.syncing) 1 else 0,
+                    if (remaining) 1 else 0, listOf("system", "light", "dark").indexOf(theme).toLong())
+            }
+        }
         val systemDark = context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK == android.content.res.Configuration.UI_MODE_NIGHT_YES
         val dark = theme == "dark" || theme == "system" && systemDark
         val background = ColorProvider(if (dark) Color(0xFF111215) else Color(0xFFF9FAFC))
@@ -297,7 +306,7 @@ class RefreshWidgetAction : ActionCallback {
         val app = context.quotaApp
         app.repository.initialize()
         refreshFromWidget(
-            refresh = { app.repository.refresh(force = true) },
+            refresh = { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { app.diagnostics.record(com.tsonglew.quotapal.diagnostics.DiagnosticEvent.WIDGET_CLICK) }; app.repository.refresh(force = true) },
             enqueue = { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { SyncScheduler.refresh(context).result.get() } },
             update = { app.updateWidgets() },
         )

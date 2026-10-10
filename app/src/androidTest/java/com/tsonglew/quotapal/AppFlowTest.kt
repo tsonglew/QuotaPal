@@ -70,6 +70,24 @@ class AppFlowTest {
         compose.onNodeWithText("取消", substring = false).performClick()
     }
 
+    @Test fun diagnosticsCanPreviewAndClearWithoutUploading() {
+        val diagnostics = compose.activity.quotaApp.diagnostics
+        diagnostics.clear()
+        diagnostics.record(com.tsonglew.quotapal.diagnostics.DiagnosticEvent.HTTP_START, 0)
+        compose.onNodeWithTag("tab-settings").performClick()
+        compose.onNodeWithTag("diagnostics-preview").performScrollTo().performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag("diagnostics-report").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("diagnostics-report").assertTextContains("Hourly observations schema=1", substring = true)
+        compose.onNodeWithTag("diagnostics-report").assertTextContains("HTTP_START 0", substring = true)
+        compose.onNodeWithTag("diagnostics-close").performClick()
+        compose.onNodeWithTag("diagnostics-clear").performScrollTo().performClick()
+        compose.waitUntil(10_000) { !diagnostics.report().contains("HTTP_START 0") }
+        compose.onNodeWithTag("diagnostics-preview").performScrollTo().performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag("diagnostics-report").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("diagnostics-report").assertTextContains("Recent events", substring = true)
+        compose.onNodeWithTag("diagnostics-close").performClick()
+    }
+
     private fun screenshot(name: String) {
         compose.waitForIdle()
         saveDeviceScreenshot(compose.activity, name, compose.onRoot().captureToImage().asAndroidBitmap())
