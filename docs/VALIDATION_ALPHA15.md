@@ -62,3 +62,5 @@ PR #11 的精确提交 34704b3 六组矩阵与 gate 成功，API 31 原三组件
 API 31 完整失败报告显示 screenBounds=Rect(823,1196–886,1245)，语义 TextView 的 hasOnClickListeners=false，直接父 FrameLayout 的 hasOnClickListeners=true。种子快照成功之后仍没有 WIDGET_CLICK／REFRESH_START／HTTP_START。后续候选改为定位这个直接动作容器的屏幕可见区域，等待 UI idle 后注入两次 50ms 按压、间隔 50ms 的真实触摸；debug 宿主记录最多 20 条输入事件及是否被处理，以区分输入未抵达与回调未执行。仍保留原 6 秒三组件进度、一次请求、83% 成功快照及唯一周期任务断言。候选修复需完整云端矩阵和主分支回归证明，不能仅靠坐标推断宣布解决。
 
 本次同时在完整设备套件成功后追加五轮同一真实三组件点击测试，每轮仍执行原全部断言，失败使该设备 job 和统一 gate 失败；普通及 Android 17 均经过共同的 device_ci.sh，因此六组均覆盖。每轮 instrumentation 原始日志随截图产物保留。用重复执行检查已观察到的间歇性，不把一次全绿当作稳定性证明。
+
+PR #12 首轮 38030802797 的 API 35／37.0 失败，其他四组成功。API 35 在目标就绪阶段报 `Refresh action must become visible`，尚未注入触摸，不能作为触摸已送达的证据。后续候选沿语义节点向上查找最近动作容器，拒绝包含额度正文的外层打开 App 容器，并用窗口焦点、实际可见矩形判断可点击位置；不再把 `isLayoutRequested` 当作可见性前提。失败输出增加父节点、焦点、尺寸、布局请求状态及截图。此候选和五轮重复检查仍待新的云端执行验证。

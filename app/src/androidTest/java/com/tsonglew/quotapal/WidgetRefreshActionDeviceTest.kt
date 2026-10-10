@@ -73,18 +73,20 @@ class WidgetRefreshActionDeviceTest {
                     scenario.onActivity { activity ->
                         val views = descendants(activity.widgetView)
                         lastTree = views.joinToString("\n") {
-                            "${it.javaClass.simpleName}: description=${it.contentDescription}, clickable=${it.hasOnClickListeners()}"
+                            "${it.javaClass.simpleName}: description=${it.contentDescription}, clickable=${it.hasOnClickListeners()}, parent=${it.parent?.javaClass?.simpleName}, shown=${it.isShown}, layoutRequested=${it.isLayoutRequested}, size=${it.width}x${it.height}, windowFocus=${it.hasWindowFocus()}"
                         }
                         val actions = views.filter { it.contentDescription?.toString() == "刷新额度" }
                         org.junit.Assert.assertTrue("Refresh semantics must be unique\n$lastTree", actions.size <= 1)
                         actions.singleOrNull()?.let { action ->
-                            // Glance puts semantics on the TextView and the action on
-                            // its immediate wrapper. Target that wrapper's hit rectangle,
-                            // never the outer widget's open-App click listener.
-                            val target = if (action.hasOnClickListeners()) action else
-                                (action.parent as? android.view.View)?.takeIf { it.hasOnClickListeners() }
+                            // RemoteViews can insert multiple wrappers between semantics
+                            // and the action. Reject the widget-wide open-App listener:
+                            // that subtree also contains the seeded quota label.
+                            val target = generateSequence(action) { it.parent as? android.view.View }
+                                .takeWhile { it !== activity.widgetView }
+                                .firstOrNull { it.hasOnClickListeners() }
+                                ?.takeIf { labels(it).none { label -> label.text.contains("62%") } }
                             val bounds = android.graphics.Rect()
-                            if (target != null && activity.hasWindowFocus() && target.isShown && !target.isLayoutRequested &&
+                            if (target != null && activity.hasWindowFocus() && target.isShown &&
                                 target.getLocalVisibleRect(bounds) && !bounds.isEmpty) {
                                 // Input injection takes screen coordinates. GlobalVisibleRect
                                 // is relative to the root View and can omit the window offset.
@@ -97,6 +99,9 @@ class WidgetRefreshActionDeviceTest {
                         }
                     }
                     if (refreshBounds == null) Thread.sleep(50)
+                }
+                if (refreshBounds == null) instrumentation.uiAutomation.takeScreenshot()?.let {
+                    saveDeviceScreenshot(context, "widget-touch-missing-target", it)
                 }
                 org.junit.Assert.assertNotNull("Refresh action must become visible\n$lastTree", refreshBounds)
                 val bounds = requireNotNull(refreshBounds)
