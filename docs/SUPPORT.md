@@ -55,7 +55,17 @@
 | FOREGROUND / MANUAL_REFRESH / WIDGET_CLICK | 前台刷新入口／应用手动刷新／组件点击刷新 |
 | APP_START / UI_ERROR | 应用进程启动／界面操作或偏好读取异常 |
 
-SyncResult：SUCCESS=0、RETRY=1、AUTH_REQUIRED=2、DEFERRED=3、NO_ACCOUNT=4。FailureKind：AUTH=0、FORBIDDEN=1、LIMITED=2、NETWORK=3、SERVER=4、PROTOCOL=5、STORAGE=6。布尔值均为 0/1。后台未出现 WORK_START 时，结合报告中的网络、省电和电池优化状态检查系统调度；出现跳过事件时按原因检查缓存或退避。日志写入失败不会阻断额度刷新。
+SyncResult：SUCCESS=0、RETRY=1、AUTH_REQUIRED=2、DEFERRED=3、NO_ACCOUNT=4。FailureKind：AUTH=0、FORBIDDEN=1、LIMITED=2、NETWORK=3、SERVER=4、PROTOCOL=5、STORAGE=6。事件位置参数中的布尔值为 0/1。后台未出现 WORK_START 时，结合报告中的网络、省电、电池优化和系统后台受限状态检查系统调度；出现跳过事件时按原因检查缓存或退避。日志写入失败不会阻断额度刷新。
+
+报告头中的 `powerSave`、`idle`、`batteryExempt`、`backgroundRestricted` 使用 true/false，表示生成报告时的系统状态；`networkValidated=null` 表示没有读到当前网络能力。它们不是历史记录，不能用当前状态反推故障当时的状态，也不能读取 OEM 自启动／任务锁定等私有开关。
+
+| 现象与事件 | 下一步核对 |
+| --- | --- |
+| 缓存很旧，目标周期附近没有 WORK_START | 核对系统限制、网络和后台任务状态；仅凭 ENQUEUED 或事件缺失不能锁定原因 |
+| HTTP_END 0 200 后没有 SNAPSHOT_SAVED | 查看 REFRESH_END 的解析／存储错误；HTTP 200 不等于有效快照已保存 |
+| 已有 SNAPSHOT_SAVED，但组件显示旧时间 | 对照 WIDGET_START／WIDGET_END／WIDGET_ERROR、组件状态和实际截图，检查更新请求及 Launcher 显示 |
+
+合成账号的正式 APK 外部 Doze 实验中，[恢复事件原文](diagnostics/power-api31/doze/app-recovery-events.txt) 与服务计数、缓存及桌面截图对应：WORK_START → HTTP_END 0 200 → SNAPSHOT_SAVED → WORK_END → WIDGET_END。此样本说明如何关联已有证据；最近 200 条事件可能已滚动丢弃，进程被系统终止也可能没有结束事件，不能把缺少某条事件直接等同于请求卡死。
 
 ### 48 小时与 7 天观察
 

@@ -1,0 +1,13 @@
+{
+  "observer_exit_code": 0,
+  "script_source": "8e4777e846769ee8ca8adcc73a3b73edf2b24a25",
+  "apk_source": "6ac605a8cb15c3745684bd5763668018e517f858",
+  "apk_version": "0.1.0-alpha16",
+  "observed_seconds": 978.7250401973724,
+  "restricted_requests": 0,
+  "recovery_requests": 1,
+  "widget_time": "10/10 19:15",
+  "result": "PASS",
+  "limits": "One API 31 synthetic-account cycle; battery saver, OEM and long-term observations remain separate.",
+  "screenshot_capture_note": "Widget page was captured after the next saver probe began; it verifies the recovered 19:15 widget time, not the restricted-mode power setting."
+}

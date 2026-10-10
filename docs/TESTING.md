@@ -153,3 +153,9 @@ alpha17 本地验证：71 项 JVM 测试、lint 和构建通过；完整 AppFlow
 [AOSP 官方测试说明](https://source.android.com/docs/core/power/app_mgmt#test-app-restrictions) 使用 `allow` 恢复默认允许行为。外部探针、原 `power_smoke.sh` 和诊断设备测试统一修正，拒绝把已有显式 default 当成未受限状态；恢复后检查实际状态。诊断回归增加最终 `isBackgroundRestricted=false` 断言，独立 API 31 实测 3.776 秒通过（[原文](diagnostics/alpha17-background-restoration-api31.txt)）。早期省电探针的缓存／组件结果不作为后台权限已经恢复的证明。
 
 首次修正重跑在施加限制前因应用仍处于近期服务清理阶段而退出；保留 [前置失败](diagnostics/power-api31/restricted-default-failure/retry-process-still-alive.txt)。脚本改为最多等待 60 秒、重复普通 `am kill` 并确认 PID 消失，仍不使用 force-stop；设置完成前任务已到期则拒绝运行。新的完整周期正在观察，E03 仍待验收。
+
+### API 31 外部后台受限实测
+
+修正后的完整重跑通过（[汇总](diagnostics/power-api31/restricted/summary.json)、[原文](diagnostics/power-api31/restricted/observer.txt)）：约 974 秒限制期间零新增请求，默认网络持续 VALIDATED，成功缓存时间及组件 ID 不变。恢复 allow 后，原周期任务自动请求一次，period_count 从 3 增至 4，fetchedAt 从 1791629798 更新为 1791630946；组件显示更新于 19:15，crash buffer 为空、系统无 ANR。未打开 App 或强制执行 job。
+
+[组件截图](diagnostics/power-api31/restricted/recovered-widget.png) 采集时下一轮省电观察已经开始，因此只作为恢复后组件时间的证据，系统限制状态以各阶段快照／JobScheduler 记录为准。首轮 default 恢复失败及第一次重跑的进程前置失败继续保留，不替换成成功结果。系统省电完整周期仍在运行，E03 尚未勾选。
