@@ -1,24 +1,35 @@
   JOB #u0a146/2: 266be42 com.tsonglew.quotapal/androidx.work.impl.background.systemjob.SystemJobService
+      Minimum latency: +3649d23h59m59s999ms
     Required constraints: CHARGING TIMING_DELAY [0x80000001]
     Satisfied constraints: BATTERY_NOT_LOW BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x1400002]
     Unsatisfied constraints: CHARGING TIMING_DELAY [0x80000001]
       readyNotDozing: false
       readyNotRestrictedInBg: true
+    Enqueue time: -17m15s798ms
+    Run time: earliest=+3649d23h42m44s201ms, latest=none, original latest=none
     Ready: false (job=false user=true !restricted=true !pending=true !active=true !backingup=true comp=true)
   JOB #u0a146/3: 49bc46b com.tsonglew.quotapal/androidx.work.impl.background.systemjob.SystemJobService
+      Minimum latency: +14m58s621ms
     Required constraints: TIMING_DELAY CONNECTIVITY [0x90000000]
     Satisfied constraints: BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x1400000]
     Unsatisfied constraints: TIMING_DELAY CONNECTIVITY [0x90000000]
       readyNotDozing: false
       readyNotRestrictedInBg: true
+    Enqueue time: -17m14s165ms
+    Run time: earliest=-2m15s544ms, latest=none, original latest=none
     Ready: false (job=false user=true !restricted=true !pending=true !active=true !backingup=true comp=true)
+    UID: 10146; Network: 101 (blocked=REASON_DOZE)
       Required constraints:
       Satisfied constraints: DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x3400000]
       Unsatisfied constraints:
         readyNotDozing: true
         readyNotRestrictedInBg: true
+      Enqueue time: -17m16s148ms
+      Run time: earliest=none, latest=none, original latest=none
       Required constraints: CONNECTIVITY [0x10000000]
       Satisfied constraints: CONNECTIVITY DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x13400000]
       Unsatisfied constraints:
         readyNotDozing: true
         readyNotRestrictedInBg: true
+      Enqueue time: -17m16s179ms
+      Run time: earliest=none, latest=none, original latest=none
