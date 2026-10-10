@@ -25,6 +25,15 @@ class WidgetTestHostActivity : Activity() {
     var thirdWidgetView: AppWidgetHostView? = null
         private set
     private var secondaryWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+    var lastWidgetUpdateAt = 0L
+        private set
+    val touchEvents = mutableListOf<String>()
+    override fun dispatchTouchEvent(event: android.view.MotionEvent): Boolean {
+        val handled = super.dispatchTouchEvent(event)
+        touchEvents.add("action=${event.actionMasked}, x=${event.rawX}, y=${event.rawY}, handled=$handled")
+        if (touchEvents.size > 20) touchEvents.removeAt(0)
+        return handled
+    }
     private lateinit var host: AppWidgetHost
     private lateinit var root: FrameLayout
     var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
@@ -34,7 +43,15 @@ class WidgetTestHostActivity : Activity() {
         super.onCreate(savedInstanceState)
         val width = intent.getIntExtra("width", 280)
         val height = intent.getIntExtra("height", 150)
-        host = AppWidgetHost(this, intent.getIntExtra("hostId", hostIds.incrementAndGet()))
+        host = object : AppWidgetHost(this, intent.getIntExtra("hostId", hostIds.incrementAndGet())) {
+            override fun onCreateView(context: android.content.Context, id: Int, info: AppWidgetProviderInfo): AppWidgetHostView =
+                object : AppWidgetHostView(context) {
+                    override fun updateAppWidget(remoteViews: android.widget.RemoteViews?) {
+                        super.updateAppWidget(remoteViews)
+                        lastWidgetUpdateAt = android.os.SystemClock.uptimeMillis()
+                    }
+                }
+        }
         val retainedId = intent.getIntExtra("existingWidgetId", AppWidgetManager.INVALID_APPWIDGET_ID)
         val (id, view) = if (retainedId == AppWidgetManager.INVALID_APPWIDGET_ID) {
             bindWidget(width, height, intent.getBooleanExtra("slim", false))

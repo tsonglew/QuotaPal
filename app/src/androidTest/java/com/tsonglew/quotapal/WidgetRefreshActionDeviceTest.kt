@@ -46,11 +46,13 @@ class WidgetRefreshActionDeviceTest {
                         if (!matched) Thread.sleep(50)
                     }
                     var actual = ""
+                    var deliveredTouches = ""
                     scenario.onActivity { activity ->
+                        deliveredTouches = activity.touchEvents.joinToString()
                         actual = listOf(activity.widgetView, requireNotNull(activity.secondaryWidgetView), requireNotNull(activity.thirdWidgetView))
                             .joinToString(" | ") { labels(it).joinToString { label -> label.text.toString() } }
                     }
-                    org.junit.Assert.assertTrue("All three widgets must show $expected; actual=$actual; touch=$touchDescription; requests=${app.usageRequests.get()}; state=${app.repository.state.value}; diagnostics=${app.diagnostics.report()}", matched)
+                    org.junit.Assert.assertTrue("All three widgets must show $expected; actual=$actual; touch=$touchDescription; delivered=$deliveredTouches; requests=${app.usageRequests.get()}; state=${app.repository.state.value}; diagnostics=${app.diagnostics.report()}", matched)
                 }
                 awaitBoth("62%")
                 val before = app.usageRequests.get()
@@ -67,29 +69,57 @@ class WidgetRefreshActionDeviceTest {
                 val clickDeadline = android.os.SystemClock.elapsedRealtime() + 20_000
                 var refreshBounds: android.graphics.Rect? = null
                 var lastTree = ""
+                var stableTarget: android.view.View? = null
+                var stableBounds: android.graphics.Rect? = null
+                var stableSince = 0L
                 while (refreshBounds == null && android.os.SystemClock.elapsedRealtime() < clickDeadline) {
+                    instrumentation.waitForIdleSync()
                     scenario.onActivity { activity ->
                         val views = descendants(activity.widgetView)
                         lastTree = views.joinToString("\n") {
-                            "${it.javaClass.simpleName}: description=${it.contentDescription}, clickable=${it.hasOnClickListeners()}"
+                            "${it.javaClass.simpleName}: description=${it.contentDescription}, clickable=${it.hasOnClickListeners()}, parent=${it.parent?.javaClass?.simpleName}, shown=${it.isShown}, layoutRequested=${it.isLayoutRequested}, size=${it.width}x${it.height}, windowFocus=${it.hasWindowFocus()}"
                         }
                         val actions = views.filter { it.contentDescription?.toString() == "刷新额度" }
                         org.junit.Assert.assertTrue("Refresh semantics must be unique\n$lastTree", actions.size <= 1)
                         actions.singleOrNull()?.let { action ->
+                            // RemoteViews can insert multiple wrappers between semantics
+                            // and the action. Reject the widget-wide open-App listener:
+                            // that subtree also contains the seeded quota label.
+                            val target = generateSequence(action) { it.parent as? android.view.View }
+                                .takeWhile { it !== activity.widgetView }
+                                .firstOrNull { it.hasOnClickListeners() }
+                                ?.takeIf { labels(it).none { label -> label.text.contains("62%") } }
                             val bounds = android.graphics.Rect()
-                            if (activity.hasWindowFocus() && action.isShown && !action.isLayoutRequested &&
-                                action.getLocalVisibleRect(bounds) && !bounds.isEmpty) {
+                            if (target != null && activity.hasWindowFocus() && target.isShown &&
+                                target.getLocalVisibleRect(bounds) && !bounds.isEmpty) {
                                 // Input injection takes screen coordinates. GlobalVisibleRect
                                 // is relative to the root View and can omit the window offset.
                                 val screen = IntArray(2)
-                                action.getLocationOnScreen(screen)
+                                target.getLocationOnScreen(screen)
                                 bounds.offset(screen[0], screen[1])
-                                refreshBounds = bounds
-                                touchDescription = "screenBounds=$bounds; action=${action.javaClass.simpleName}; tree=$lastTree"
+                                val now = android.os.SystemClock.uptimeMillis()
+                                if (target !== stableTarget || bounds != stableBounds) {
+                                    stableTarget = target
+                                    stableBounds = android.graphics.Rect(bounds)
+                                    stableSince = now
+                                }
+                                // AppWidget updates can replace a child between DOWN and
+                                // UP. Wait for both the actual hit target and host updates
+                                // to settle before starting the real gesture.
+                                if (now - stableSince >= 500 && now - activity.lastWidgetUpdateAt >= 500) {
+                                    refreshBounds = bounds
+                                    touchDescription = "screenBounds=$bounds; action=${action.javaClass.simpleName}; target=${target.javaClass.simpleName}; tree=$lastTree"
+                                }
+                            } else {
+                                stableTarget = null
+                                stableBounds = null
                             }
                         }
                     }
                     if (refreshBounds == null) Thread.sleep(50)
+                }
+                if (refreshBounds == null) instrumentation.uiAutomation.takeScreenshot()?.let {
+                    saveDeviceScreenshot(context, "widget-touch-missing-target", it)
                 }
                 org.junit.Assert.assertNotNull("Refresh action must become visible\n$lastTree", refreshBounds)
                 val bounds = requireNotNull(refreshBounds)
@@ -103,12 +133,14 @@ class WidgetRefreshActionDeviceTest {
                             org.junit.Assert.assertTrue("Real refresh touch must be delivered",
                                 instrumentation.uiAutomation.injectInputEvent(event, true))
                         } finally { event.recycle() }
+                        if (eventAction == android.view.MotionEvent.ACTION_DOWN) Thread.sleep(50)
                     }
                 }
                 // A real touch targets Glance's action even when its semantic wrapper
                 // and PendingIntent live on different nodes. Ancestor performClick can
                 // accidentally invoke the widget's open-App action instead.
                 tapRefresh()
+                Thread.sleep(50)
                 tapRefresh()
                 try {
                     // Observe actual progress before permitting HTTP completion, within

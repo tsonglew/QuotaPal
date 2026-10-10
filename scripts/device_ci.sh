@@ -11,7 +11,7 @@ if [[ "$test_result" -eq 0 ]]; then
   # Gradle/UTP may remove the test packages when its suite finishes.
   if adb -e install -r app/build/outputs/apk/debug/app-debug.apk &&
      adb -e install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk; then
-    bash scripts/lifecycle_smoke.sh && bash scripts/system_time_smoke.sh && bash scripts/network_smoke.sh
+    bash scripts/widget_touch_smoke.sh && bash scripts/lifecycle_smoke.sh && bash scripts/system_time_smoke.sh && bash scripts/network_smoke.sh
     test_result=$?
     if [[ "$test_result" -eq 0 && "$(adb -e shell getprop ro.build.version.sdk | tr -d '\r')" == 29 ]]; then
       bash scripts/power_smoke.sh

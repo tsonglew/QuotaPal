@@ -54,3 +54,15 @@ PR #10 已在精确 head 46a7b402f280820f74c2d7c145740b18bf51e7f2 的完整 CI 3
 测试此前把 getGlobalVisibleRect 的根 View 坐标直接用于屏幕触摸注入；Android 官方 View 文档明确区分根 View 与屏幕坐标。修正使用 getLocalVisibleRect 加 getLocationOnScreen，等待窗口焦点与布局完成，失败报告附触摸屏幕坐标与视图树。仍然注入两次真实触摸，保持 6 秒内三个进度状态、一次请求、最终 83% 和唯一周期任务的原断言。此修正与无回调现象一致，但云端完整矩阵通过之前不宣称间歇失败已解决。
 
 坐标依据：[Android View API](https://developer.android.com/reference/android/view/View)。
+
+## 坐标修正后的重复失败
+
+PR #11 的精确提交 34704b3 六组矩阵与 gate 成功，API 31 原三组件测试通过（3.734s）；经用户确认合并后 master=d6f7cfda2e9525699167e9feba304db10dabfa6d。主分支运行 38030059760 的 API 31／35 再次失败，因此不能把 PR 首次全绿当成间歇问题已解决。
+
+API 31 完整失败报告显示 screenBounds=Rect(823,1196–886,1245)，语义 TextView 的 hasOnClickListeners=false，直接父 FrameLayout 的 hasOnClickListeners=true。种子快照成功之后仍没有 WIDGET_CLICK／REFRESH_START／HTTP_START。后续候选改为定位这个直接动作容器的屏幕可见区域，等待 UI idle 后注入两次 50ms 按压、间隔 50ms 的真实触摸；debug 宿主记录最多 20 条输入事件及是否被处理，以区分输入未抵达与回调未执行。仍保留原 6 秒三组件进度、一次请求、83% 成功快照及唯一周期任务断言。候选修复需完整云端矩阵和主分支回归证明，不能仅靠坐标推断宣布解决。
+
+本次同时在完整设备套件成功后追加五轮同一真实三组件点击测试，每轮仍执行原全部断言，失败使该设备 job 和统一 gate 失败；普通及 Android 17 均经过共同的 device_ci.sh，因此六组均覆盖。每轮 instrumentation 原始日志随截图产物保留。用重复执行检查已观察到的间歇性，不把一次全绿当作稳定性证明。
+
+PR #12 首轮 38030802797 的 API 35／37.0 失败，其他四组成功。API 35 在目标就绪阶段报 `Refresh action must become visible`，尚未注入触摸，不能作为触摸已送达的证据。后续候选沿语义节点向上查找最近动作容器，拒绝包含额度正文的外层打开 App 容器，并用窗口焦点、实际可见矩形判断可点击位置；不再把 `isLayoutRequested` 当作可见性前提。失败输出增加父节点、焦点、尺寸、布局请求状态及截图。此候选和五轮重复检查仍待新的云端执行验证。
+
+API 37.0 的输入轨迹显示第一次 DOWN 被处理而 UP 未被处理，随后真实触摸触发 MainActivity 的全组件打开动作。logcat 在 06:32:10.777 通知主组件更新，06:32:10.793 启动 MainActivity；这支持 RemoteViews 替换与手势竞争的判断。debug 宿主记录实际 updateAppWidget 时间，测试在 UI idle 之后重新读取位置，并等待目标对象、矩形以及宿主更新均稳定 500ms 才注入触摸。原刷新行为断言和六组五轮重复检查保留；该候选仍需 CI 验证。
