@@ -44,3 +44,13 @@ PR [#10](https://github.com/tsonglew/QuotaPal/pull/10) 已创建并关联本任�
 运行 38018860257 最终 success：delivery、build、API 29／31／35／36／37.0／37.2 六组设备测试、Android CI gate 全部通过。API 29 实际下载 HTML 报告中 diagnosticsCanPreviewAndClearWithoutUploading=passed（5.457s），realRemoteViewsClickFetchesOnceForThreeWidgets=passed（5.043s）；保留原三组件进度与请求去重断言。此前主分支失败记录仍保留，本轮成功不表示已证明所有间歇性失败原因。
 
 预览工作流 [38019563477](https://github.com/tsonglew/QuotaPal/actions/runs/38019563477) success，deployment 6975361817 环境 android-preview/pr-10，sha/ref 均为 3e5aeb5953cd8539d9252a1c18c17fd01d883872，状态 success。[APK 下载入口](https://github.com/tsonglew/QuotaPal/actions/runs/38018860257/artifacts/11657277423) 对应已实际下载校验的产物。G03 完成；主分支完整回归、固定签名、覆盖升级和正式 Release 仍未完成。
+
+## 合并后主分支回归与触摸坐标修正
+
+PR #10 已在精确 head 46a7b402f280820f74c2d7c145740b18bf51e7f2 的完整 CI 38019644916 成功后合并，master=49093aa7fbb329138b89f9553dd4cfc88377e6a1。按用户授权触发固定签名验证运行 38020312346；它使用完整独立 gate，未公开发布 Release。
+
+主分支运行 38020309282 的 API 31／37.0 三组件进度断言再次失败，其余四组成功，统一 gate 失败，G02 仍未完成。API 31 下载的完整报告中，种子快照成功后至断言失败均没有 WIDGET_CLICK／REFRESH_START／HTTP_START，三组件保持 62%。这是触摸未触发回调的证据，不能归因于请求或进度渲染慢。
+
+测试此前把 getGlobalVisibleRect 的根 View 坐标直接用于屏幕触摸注入；Android 官方 View 文档明确区分根 View 与屏幕坐标。修正使用 getLocalVisibleRect 加 getLocationOnScreen，等待窗口焦点与布局完成，失败报告附触摸屏幕坐标与视图树。仍然注入两次真实触摸，保持 6 秒内三个进度状态、一次请求、最终 83% 和唯一周期任务的原断言。此修正与无回调现象一致，但云端完整矩阵通过之前不宣称间歇失败已解决。
+
+坐标依据：[Android View API](https://developer.android.com/reference/android/view/View)。
