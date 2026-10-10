@@ -19,6 +19,7 @@ class QuotaTestRunner : AndroidJUnitRunner() {
 
 class TestQuotaApplication : QuotaPalApplication() {
     val usageRequests = AtomicInteger()
+    val usageRequestTimes = java.util.concurrent.ConcurrentLinkedQueue<Long>()
     @Volatile var usedPercent = 38
     @Volatile var responseDelayMillis = 0L
     @Volatile var usageResponseGate: java.util.concurrent.CountDownLatch? = null
@@ -30,6 +31,7 @@ class TestQuotaApplication : QuotaPalApplication() {
             if (chain.request().url.encodedPath != "/backend-api/wham/usage") {
                 throw java.io.IOException("No external network in device tests")
             }
+            usageRequestTimes.add(android.os.SystemClock.elapsedRealtime())
             usageRequests.incrementAndGet()
             Thread.sleep(responseDelayMillis)
             usageResponseGate?.let { gate ->
