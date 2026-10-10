@@ -24,7 +24,7 @@ fi
 mkdir -p screenshots
 adb pull /sdcard/Pictures/QuotaPalTest/. ./screenshots/ || true
 adb shell dumpsys appwidget > screenshots/widget-host-diagnostics.txt
-adb logcat -d -s AndroidRuntime GlanceAppWidget AppWidgetServiceImpl > screenshots/device-diagnostics.txt
+adb logcat -d -s AndroidRuntime GlanceAppWidget AppWidgetServiceImpl QuotaDeviceEnvironment > screenshots/device-diagnostics.txt
 if [[ "$test_result" -eq 0 && -n "${RELEASE_APK:-}" ]]; then
   bash scripts/release_smoke.sh "$RELEASE_APK" > screenshots/release-smoke.log 2>&1
   test_result=$?
