@@ -11,6 +11,8 @@
 | PR、master push、手动 CI | 交付脚本测试、71 项 JVM 测试、lint、debug APK；API 29／31／35／36／37.0／37.2 设备矩阵 | PR 或 master 全部通过后登记预览 deployment |
 | `v<versionName>` tag，或在该 tag 上手动运行 Release | 验证 tag 格式、版本及主分支祖先关系；复用完整 CI；额外构建和 lint minified release，并在四版本模拟器检查真实 release 页面 | 固定密钥签名、校验证书、发布 GitHub Release；记录 `android-release` 环境 |
 
+合并到 master 自动执行完整 CI、release lint／R8 和六组 minified 页面检查；全部通过后使用 android-release 固定密钥签名，上传 `android-signed-apk`（保留 14 天）。运行摘要提供下载链接、版本、源提交和 APK 哈希；产物包含 APK、SHA256SUMS、provenance.json。构建或设备测试失败时不会签名。PR 不接触发布 secrets，正式公开 Release 仍由版本 tag 驱动；同版本 master 产物可用于测试，正式覆盖升级仍需递增 versionCode。
+
 统一状态为 `Android CI gate`，只有交付工具检查、build 与全部设备矩阵成功才会通过。交付工具检查固定 actionlint 1.7.12、运行 ShellCheck 与 Python 测试。主分支 CI 不因后续 push 取消正在运行的验证；PR 新提交可取消旧验证。发布同 tag 串行执行。开发分支通过 PR 验证，避免 push 与 PR 重复启动矩阵；取消整个运行时 gate 跳过，实际构建或测试失败时 gate 仍失败。
 
 ## 预览 deployment
@@ -42,7 +44,7 @@ Secrets 保存以上四项；不要把密码放到 Environment variables。macOS
 
 发布步骤只在所有测试通过后获取环境 secrets。编译任务不使用签名凭据，签名任务下载 unsigned release APK，以 `zipalign`、`apksigner` 完成对齐、签名和验证。临时 keystore 退出时删除。
 
-正式发布前可先验证固定签名配置：合并到 master 后，在 Actions → Android build and tests → Run workflow 选择 master，勾选 `check-signing`。它会运行完整 CI、构建 minified release，成功后使用 android-release 签名并上传 `android-fixed-signature-check`（保留 14 天），不会创建 GitHub Release。若环境配置了分支／tag 限制，需要同时允许 master 执行此验证及版本 tag 执行正式发布。下载验证产物后核对 provenance 中的源提交、版本、证书指纹和 APK SHA-256；仅配置环境不能证明密钥与指纹匹配。
+master push 会自动生成固定签名 APK；需要手动复验时，在 Actions → Android build and tests → Run workflow 选择 master，勾选 `check-signing`。它会运行完整 CI、构建 minified release，成功后使用 android-release 签名并上传 `android-fixed-signature-check`（保留 14 天），不会创建 GitHub Release。若环境配置了分支／tag 限制，需要同时允许 master 执行此验证及版本 tag 执行正式发布。下载验证产物后核对 provenance 中的源提交、版本、证书指纹和 APK SHA-256；仅配置环境不能证明密钥与指纹匹配。
 
 先更新 `versionCode`（递增）和 `versionName`，经 PR 合并到 master，再创建 `v<versionName>` tag。示例：`versionName = "0.1.0-alpha04"` 对应 `v0.1.0-alpha04`。Release 的手动运行也必须选择已有版本 tag，不能在分支上运行。
 

@@ -26,6 +26,8 @@ on:
         default: false
 permissions:
   contents: read
+env:
+  BUILD_RELEASE: ${{ inputs.build-release || inputs.check-signing || (github.event_name == 'push' && github.ref == 'refs/heads/master') }}
 concurrency:
   group: android-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
@@ -90,17 +92,17 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Build unsigned release for signing job
-        if: (inputs.build-release || inputs.check-signing)
+        if: env.BUILD_RELEASE == 'true'
         run: ./gradlew lintRelease assembleRelease --stacktrace
       - uses: actions/upload-artifact@v4
-        if: (inputs.build-release || inputs.check-signing)
+        if: env.BUILD_RELEASE == 'true'
         with:
           name: android-release-unsigned
           path: app/build/outputs/apk/release/
           if-no-files-found: error
           retention-days: 7
       - uses: actions/upload-artifact@v4
-        if: always() && (inputs.build-release || inputs.check-signing)
+        if: always() && env.BUILD_RELEASE == 'true'
         with:
           name: android-release-diagnostics
           path: |
@@ -150,7 +152,7 @@ jobs:
       - name: Install compile platform
         run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
       - uses: actions/download-artifact@v4
-        if: (inputs.build-release || inputs.check-signing)
+        if: env.BUILD_RELEASE == 'true'
         with:
           name: android-release-unsigned
           path: release-unsigned
@@ -167,7 +169,7 @@ jobs:
       - uses: reactivecircus/android-emulator-runner@v2
         if: ${{ !startsWith(format('{0}', matrix.api-level), '37.') }}
         env:
-          RELEASE_APK: ${{ (inputs.build-release || inputs.check-signing) && 'release-unsigned/app-release-unsigned.apk' || '' }}
+          RELEASE_APK: ${{ env.BUILD_RELEASE == 'true' && 'release-unsigned/app-release-unsigned.apk' || '' }}
         with:
           api-level: ${{ matrix.api-level }}
           arch: x86_64
@@ -181,7 +183,7 @@ jobs:
         env:
           DEVICE_API: ${{ matrix.api-level }}
           DEVICE_TARGET: ${{ matrix.target }}
-          RELEASE_APK: ${{ (inputs.build-release || inputs.check-signing) && 'release-unsigned/app-release-unsigned.apk' || '' }}
+          RELEASE_APK: ${{ env.BUILD_RELEASE == 'true' && 'release-unsigned/app-release-unsigned.apk' || '' }}
         run: bash scripts/android17_device_ci.sh
       - uses: actions/upload-artifact@v4
         if: always()
@@ -205,9 +207,9 @@ jobs:
         run: test "$DELIVERY" = success && test "$BUILD" = success && test "$DEVICES" = success
 
   signing-check:
-    name: Verify fixed release signature
+    name: Build fixed-signature APK
     needs: [ci, build]
-    if: github.event_name == 'workflow_dispatch' && inputs.check-signing && github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.check-signing))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -256,7 +258,24 @@ jobs:
           ANDROID_SIGNING_CERT_SHA256: ${{ vars.ANDROID_SIGNING_CERT_SHA256 }}
         run: bash scripts/publish_release.sh
       - uses: actions/upload-artifact@v4
+        id: signed-apk
         with:
-          name: android-fixed-signature-check
+          name: ${{ github.event_name == 'push' && 'android-signed-apk' || 'android-fixed-signature-check' }}
           path: artifacts/release/
+          if-no-files-found: error
           retention-days: 14
+      - name: APK download summary
+        env:
+          ARTIFACT_URL: ${{ steps.signed-apk.outputs.artifact-url }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          provenance = json.loads(Path('artifacts/release/provenance.json').read_text())
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write(f"[Download fixed-signature APK]({os.environ['ARTIFACT_URL']})\n\n")
+              summary.write(f"Version: {provenance['tag'][1:]} (code {provenance['version_code']})\n\n")
+              summary.write(f"Source: `{provenance['source_sha']}`\n\n")
+              summary.write(f"APK SHA-256: `{provenance['sha256']}`\n\n")
+              summary.write("Artifact retained for 14 days. No GitHub Release published.\n")
+          PY
