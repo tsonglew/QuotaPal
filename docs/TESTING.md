@@ -145,3 +145,11 @@ python3 scripts/background_power_probe.py \
 报告新增 `backgroundRestricted`，读取 Android ActivityManager 的实际限制标记。独立 API 31 模拟器通过真实 app-op 切换允许→受限→允许，预览报告分别出现 false→true→false，额度请求数不变；[原始回归](diagnostics/alpha17-background-restriction-report-api31.txt) 为 14.644 秒成功。测试结束恢复原 app-op，未触碰同机另一个正式 alpha16 后台观察设备。该字段表示系统后台限制状态，不声称可读取小米自启动、任务锁定或其他 OEM 私有开关。
 
 alpha17 本地验证：71 项 JVM 测试、lint 和构建通过；完整 AppFlow 五项通过（24.266 秒），见 [runner 原文](diagnostics/alpha17-appflow-api31.txt)，覆盖诊断反复预览／清除、真实后台限制切换、隐私、主题与后台引导。跨版本仍以对应提交的云端 CI 为准。
+
+### 后台限制恢复命令修正
+
+首轮外部后台受限观察满 16 分钟后，恢复脚本把 app-op 写为显式 `default`；API 31 的 JobScheduler 仍显示 `readyNotRestrictedInBg=false`，四分钟内无请求，探针正确失败。随后只将同一 app-op 改为 `allow`，未打开 App 或强制执行任务，原任务立即自行刷新一次。原失败、修正动作与快照保留在 [失败证据](diagnostics/power-api31/restricted-default-failure/summary.json) 和 [恢复日志](diagnostics/power-api31/restricted-default-failure/corrective-allow.txt)，不把人工修正后的结果改写成原探针成功。
+
+[AOSP 官方测试说明](https://source.android.com/docs/core/power/app_mgmt#test-app-restrictions) 使用 `allow` 恢复默认允许行为。外部探针、原 `power_smoke.sh` 和诊断设备测试统一修正，拒绝把已有显式 default 当成未受限状态；恢复后检查实际状态。诊断回归增加最终 `isBackgroundRestricted=false` 断言，独立 API 31 实测 3.776 秒通过（[原文](diagnostics/alpha17-background-restoration-api31.txt)）。早期省电探针的缓存／组件结果不作为后台权限已经恢复的证明。
+
+首次修正重跑在施加限制前因应用仍处于近期服务清理阶段而退出；保留 [前置失败](diagnostics/power-api31/restricted-default-failure/retry-process-still-alive.txt)。脚本改为最多等待 60 秒、重复普通 `am kill` 并确认 PID 消失，仍不使用 force-stop；设置完成前任务已到期则拒绝运行。新的完整周期正在观察，E03 仍待验收。

@@ -1,0 +1,18 @@
+  JOB #u0a146/2: c2b9659 com.tsonglew.quotapal/androidx.work.impl.background.systemjob.SystemJobService
+      readyNotRestrictedInBg: false
+    Run time: earliest=+3649d23h21m20s863ms, latest=none, original latest=none
+    Ready: false (job=false user=true !restricted=true !pending=true !active=true !backingup=true comp=true)
+  JOB #u0a146/5: 1cbbe0b com.tsonglew.quotapal/androidx.work.impl.background.systemjob.SystemJobService
+      readyNotRestrictedInBg: false
+    Run time: earliest=-6m16s559ms, latest=none, original latest=none
+    Ready: false (job=false user=true !restricted=true !pending=true !active=true !backingup=true comp=true)
+        readyNotRestrictedInBg: true
+      Run time: earliest=none, latest=none, original latest=none
+        readyNotRestrictedInBg: true
+      Run time: earliest=none, latest=none, original latest=none
+        readyNotRestrictedInBg: true
+      Run time: earliest=-23m38s865ms, latest=none, original latest=none
+        readyNotRestrictedInBg: true
+      Run time: earliest=none, latest=none, original latest=none
+        readyNotRestrictedInBg: true
+      Run time: earliest=none, latest=none, original latest=none

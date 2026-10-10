@@ -104,8 +104,7 @@ class AppFlowTest {
         val packageName = compose.activity.packageName
         val original = shell("cmd appops get $packageName RUN_ANY_IN_BACKGROUND")
         org.junit.Assume.assumeTrue("Preserve existing restrictions", original.contains("No operations.") ||
-            Regex("RUN_ANY_IN_BACKGROUND: (allow|default)").containsMatchIn(original))
-        val restore = if (original.contains("RUN_ANY_IN_BACKGROUND: allow")) "allow" else "default"
+            Regex("RUN_ANY_IN_BACKGROUND: allow\\b").containsMatchIn(original))
         val activity = compose.activity.getSystemService(android.app.ActivityManager::class.java)
         val app = compose.activity.quotaApp as TestQuotaApplication
         val before = app.usageRequests.get()
@@ -121,7 +120,8 @@ class AppFlowTest {
             }
             org.junit.Assert.assertEquals("Diagnostics must not fetch quota", before, app.usageRequests.get())
         } finally {
-            shell("cmd appops set $packageName RUN_ANY_IN_BACKGROUND $restore")
+            shell("cmd appops set $packageName RUN_ANY_IN_BACKGROUND allow")
+            compose.waitUntil(10_000) { !activity.isBackgroundRestricted }
         }
     }
 

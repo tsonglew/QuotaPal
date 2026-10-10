@@ -48,6 +48,11 @@ def fixture_hosts_are_local(hosts):
     return all(values and values <= {'127.0.0.1', '::1'} for values in addresses.values())
 
 
+def background_allowed(appops):
+    # Explicit MODE_DEFAULT is not MODE_ALLOWED for this operation on API 31.
+    return 'No operations.' in appops or bool(re.search(r'RUN_ANY_IN_BACKGROUND: allow\b', appops))
+
+
 class Probe:
     def __init__(self, args):
         self.args = args
@@ -122,6 +127,8 @@ class Probe:
             except Exception as error:
                 failures.append(str(error))
         require(not failures, 'System restoration failed: ' + '; '.join(failures))
+        require(background_allowed(self.shell('cmd', 'appops', 'get', PACKAGE, 'RUN_ANY_IN_BACKGROUND')),
+                'Background restriction was not cleared')
 
     def run(self):
         require(self.shell('getprop', 'ro.kernel.qemu') == '1', 'Emulator required')
@@ -140,10 +147,12 @@ class Probe:
         self.original_saver = self.shell('settings', 'get', 'global', 'low_power')
         require(self.original_saver in ('0', 'null'), 'Battery saver already active')
         op = self.shell('cmd', 'appops', 'get', PACKAGE, 'RUN_ANY_IN_BACKGROUND')
-        require('No operations.' in op or re.search(r'RUN_ANY_IN_BACKGROUND: (allow|default)', op), 'Existing background restriction')
-        self.original_op = 'allow' if 'RUN_ANY_IN_BACKGROUND: allow' in op else 'default'
+        require(background_allowed(op), 'Existing background restriction')
+        self.original_op = 'allow'
         require(not self.output.exists(), 'Use a fresh output directory')
         self.output.mkdir(parents=True)
+        (self.output / 'original-system.json').write_text(json.dumps(dict(
+            deep=self.original_deep, saver=self.original_saver, appops=op), indent=2) + '\n')
         base, _ = self.snapshot('baseline')
         self.crash_evidence('baseline')
         require(len(base['work']) == 1 and base['work'][0]['interval_duration'] == 900000, 'Select 15-minute interval with one active task')
@@ -152,9 +161,17 @@ class Probe:
         require(base['server']['usage'] >= 1 and not base['server']['requireRenewal'], 'Use fresh healthy fixture')
         require(base['time'] * 1000 < base['work'][0]['last_enqueue_time'] + 840000, 'Task is too close to due time; wait for next cycle')
         self.shell('input', 'keyevent', 'KEYCODE_HOME')
-        self.shell('am', 'kill', PACKAGE)
-        time.sleep(3)
+        # Widget/session cleanup may briefly keep the just-finished worker's
+        # process important. Wait for am kill to be permitted; never force-stop.
+        deadline = time.monotonic() + 60
+        while time.monotonic() < deadline:
+            self.shell('am', 'kill', PACKAGE)
+            time.sleep(2)
+            if not self.adb('shell', 'pidof', PACKAGE, check=False).strip():
+                break
         require(not self.adb('shell', 'pidof', PACKAGE, check=False).strip(), 'App process still alive')
+        require(time.time() * 1000 < base['work'][0]['last_enqueue_time'] + 900000,
+                'Periodic task became due during setup; retry after it settles')
         try:
             self.shell('dumpsys', 'battery', 'unplug')
             if self.args.mode == 'doze':

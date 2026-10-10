@@ -1,0 +1,11 @@
+{
+  "observer_exit_code": 1,
+  "script_source": "49f8c45d3c1e26729104c97f79d173873ca4b19e",
+  "cause": "Harness restored explicit app-op default; JobScheduler still reported readyNotRestrictedInBg=false.",
+  "restricted_period_new_requests": 0,
+  "incorrect_restore_new_requests": 0,
+  "corrective_allow_new_requests": 1,
+  "corrective_action": "After original observer terminated, set only RUN_ANY_IN_BACKGROUND to allow; no app launch or forced job.",
+  "result": "Original run FAILED; corrected complete cycle pending.",
+  "source_note": "The running Python code was loaded before a source edit; traceback source-line text may therefore reflect the later working file. Original executed source is the recorded commit."
+}

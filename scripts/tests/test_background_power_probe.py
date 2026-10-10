@@ -4,10 +4,16 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from background_power_probe import Probe, fixture_hosts_are_local, validated_default, widget_ids
+from background_power_probe import Probe, background_allowed, fixture_hosts_are_local, validated_default, widget_ids
 
 
 class BackgroundPowerEvidenceTest(unittest.TestCase):
+    def test_explicit_default_is_not_unrestricted_background(self):
+        self.assertTrue(background_allowed('No operations.'))
+        self.assertTrue(background_allowed('RUN_ANY_IN_BACKGROUND: allow'))
+        self.assertFalse(background_allowed('RUN_ANY_IN_BACKGROUND: default'))
+        self.assertFalse(background_allowed('RUN_ANY_IN_BACKGROUND: ignore'))
+
     def test_restore_attempts_remaining_settings_after_command_failure(self):
         probe = Probe(SimpleNamespace(output='/unused'))
         probe.original_op, probe.original_deep, probe.original_saver = 'allow', '0', 'null'

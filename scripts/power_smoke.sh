@@ -16,17 +16,16 @@ original_saver=$(adb -e shell settings get global low_power | tr -d '\r')
 original_op=$(adb -e shell cmd appops get "$package" RUN_ANY_IN_BACKGROUND | tr -d '\r')
 # Refuse to overwrite a pre-existing restriction or active forced-idle experiment.
 [[ "$original_saver" == 0 || "$original_saver" == null ]]
-[[ "$original_op" == *'No operations.'* || "$original_op" == *'allow'* || "$original_op" == *'default'* ]]
+[[ "$original_op" == *'No operations.'* || "$original_op" == *'RUN_ANY_IN_BACKGROUND: allow'* ]]
 [[ "$(adb -e shell dumpsys deviceidle get deep | tr -d '\r')" == ACTIVE ]]
 restore() {
   adb -e shell dumpsys deviceidle unforce >/dev/null || true
   if [[ "$original_deep" == 0 ]]; then adb -e shell dumpsys deviceidle disable deep >/dev/null || true; fi
   if [[ "$original_screen" == true ]]; then adb -e shell input keyevent KEYCODE_WAKEUP >/dev/null || true; fi
   adb -e shell cmd power set-mode 0 >/dev/null || true
-  adb -e shell cmd appops set "$package" RUN_ANY_IN_BACKGROUND default >/dev/null || true
-  if [[ "$original_op" != *'No operations.'* && "$original_op" == *'allow'* ]]; then
-    adb -e shell cmd appops set "$package" RUN_ANY_IN_BACKGROUND allow >/dev/null || true
-  fi
+  # AOSP's unrestricted default behavior is MODE_ALLOWED; explicit "default"
+  # can leave JobScheduler readyNotRestrictedInBg=false on API 31.
+  adb -e shell cmd appops set "$package" RUN_ANY_IN_BACKGROUND allow >/dev/null || true
   adb -e shell dumpsys battery reset >/dev/null || true
   if [[ "$original_saver" == null ]]; then adb -e shell settings delete global low_power >/dev/null || true; fi
 }
@@ -85,6 +84,8 @@ for mode in doze saver restricted; do
     grep -q 'readyNotRestrictedInBg: false' "$output_dir/$mode-jobs.txt"
   fi
   restore
+  restored_op=$(adb -e shell cmd appops get "$package" RUN_ANY_IN_BACKGROUND | tr -d '\r')
+  [[ "$restored_op" == *'No operations.'* || "$restored_op" == *'RUN_ANY_IN_BACKGROUND: allow'* ]]
   # Process replacement gives a real disk/Keystore/cache recovery check.
   adb -e shell am force-stop "$package"
   phase "$mode" restore
