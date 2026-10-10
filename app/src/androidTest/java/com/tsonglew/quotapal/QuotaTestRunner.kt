@@ -42,6 +42,6 @@ class TestQuotaApplication : QuotaPalApplication() {
                 .apply { usageRetryAfter?.let { header("Retry-After", it) } }
                 .body("""{"rate_limit":{"primary_window":{"used_percent":$usedPercent,"limit_window_seconds":604800}}}"""
                     .toResponseBody("application/json".toMediaType())).build()
-        }.build())
+        }.build(), diagnostics = diagnostics)
     }
 }

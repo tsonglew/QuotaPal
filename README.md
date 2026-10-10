@@ -6,7 +6,7 @@
 
 基于原生界面截图合成的展示效果图，额度均为示例数据。[查看原生截图](docs/SCREENSHOTS.md)。
 
-当前开发分支版本：`0.1.0-alpha14`（尚未合并）。已实现分品牌后台引导、小组件即时手动刷新、离线隐私说明、后台有限重试和系统时间变化后的缓存重绘。alpha14 补充刷新存储异常处理与写盘失败时的进程内限流保护，56 项单元测试、lint、构建通过。[六版本 CI](https://github.com/tsonglew/QuotaPal/actions/runs/38007906590) 的 API 29／31／35／36／37.0／37.2 及统一 gate 全部通过，Android 17 普通／16KB 镜像各 18 项普通设备测试及四个独立探针通过，实际页面大小 4096／16384。已有小米 Android 17 真机连接成功反馈，真实续期、清理后更新及长期自用仍待验收。验证范围见 [alpha14 记录](docs/VALIDATION_ALPHA14.md)。
+当前开发分支版本：`0.1.0-alpha15`（开发中，尚未合并）。alpha15 新增本机诊断预览／分享／清除、7 天按小时请求与刷新统计，以及后台任务状态；本地 71 项 JVM、debug lint 与应用／测试 APK 构建通过，六版本设备与固定签名执行待验收，见 [alpha15 记录](docs/VALIDATION_ALPHA15.md)。公开渠道确定为 GitHub Releases APK。已实现分品牌后台引导、小组件即时手动刷新、离线隐私说明、后台有限重试和系统时间变化后的缓存重绘。alpha14 补充刷新存储异常处理与写盘失败时的进程内限流保护，56 项单元测试、lint、构建通过。[六版本 CI](https://github.com/tsonglew/QuotaPal/actions/runs/38007906590) 的 API 29／31／35／36／37.0／37.2 及统一 gate 全部通过，Android 17 普通／16KB 镜像各 18 项普通设备测试及四个独立探针通过，实际页面大小 4096／16384。已有小米 Android 17 真机连接成功反馈，真实续期、清理后更新及长期自用仍待验收。验证范围见 [alpha14 记录](docs/VALIDATION_ALPHA14.md)。
 
 - [开发计划](docs/DEVELOPMENT_PLAN.md)
 - [开发与验收 checklist](docs/DEVELOPMENT_CHECKLIST.md)

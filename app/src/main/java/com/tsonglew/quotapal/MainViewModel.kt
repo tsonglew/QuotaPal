@@ -16,7 +16,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val mutableError = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = mutableError
     fun dismissError() { mutableError.value = null }
-    private fun reportError() { mutableError.value = "操作未完成，请重试；若持续失败，请检查设备可用存储空间" }
+    private fun reportError() { app.scope.launch { app.diagnostics.record(com.tsonglew.quotapal.diagnostics.DiagnosticEvent.UI_ERROR) }; mutableError.value = "操作未完成，请重试；若持续失败，请检查设备可用存储空间" }
     private fun launchOperation(block: suspend () -> Unit) = viewModelScope.launch {
         runUiOperation(::reportError, block)
     }
@@ -28,12 +28,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init { onForeground() }
     fun onForeground() {
         launchOperation {
+            withContext(Dispatchers.IO) { app.diagnostics.record(com.tsonglew.quotapal.diagnostics.DiagnosticEvent.FOREGROUND) }
             app.repository.initialize()
             if (state.value.connected) { app.repository.refresh(); app.updateWidgets() }
             app.reconcileSync()
         }
     }
-    fun refresh() { launchOperation { app.repository.refresh(true); app.updateWidgets() } }
+    fun refresh() { launchOperation { withContext(Dispatchers.IO) { app.diagnostics.record(com.tsonglew.quotapal.diagnostics.DiagnosticEvent.MANUAL_REFRESH) }; app.repository.refresh(true); app.updateWidgets() } }
     fun demo() { launchOperation { cancelLogin(); app.repository.demo(); app.reconcileSync(); app.updateWidgets() } }
     fun logout() { cancelLogin(); app.scope.launch { runUiOperation(::reportError) { app.repository.logout(); app.reconcileSync(); app.updateWidgets() } } }
     fun showRemaining(value: Boolean) { launchOperation { app.settings.showRemaining(value); app.updateWidgets() } }

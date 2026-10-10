@@ -30,3 +30,43 @@
 | 发布与升级 | 固定发布签名与签名 Release 的真实交付尚未验收；开发 APK 不应当作稳定发布版。 |
 
 发现刷新问题时记录 App 版本、系统／品牌、最后成功时间、是否清理或强停、网络与电池设置即可；不要发送 token、授权码、账号缓存或未脱敏的原始响应。排查入口见 [使用帮助](RELEASE_MATERIALS.md)。
+
+## 本机诊断报告
+
+复现问题后，进入设置 → 问题排查 → 预览诊断报告，核对后通过“分享”发送给维护者。详细事件只保留最近 200 条，另保留最近 168 个小时的汇总统计；清除应用数据或设置中的“清除诊断记录”可删除。退出账号不会清除这些不含账号信息的事件。分享后由接收应用管理报告副本。
+
+报告 schema=1，每行包含 UTC 时间、事件名称和位置参数。设备报告不包含品牌、设备标识、令牌、账号、额度值、接口响应或截图。UI_STATE 表示 Compose 状态观察，WIDGET_END 表示组件更新请求完成，均不能证明 Launcher 的最终像素正确；显示问题仍需补充遮挡个人信息的截图。
+
+| 事件 | 参数顺序／含义 |
+| --- | --- |
+| UNCAUGHT_EXCEPTION | 类别（其他0、内存不足1、栈溢出2）、是否主线程；仅本机标记，保留系统原异常处理 |
+| HTTP_START / HTTP_END / HTTP_NETWORK_FAILURE | 类别（额度0、授权1）／类别、HTTP状态、响应头耗时毫秒／类别、请求是否取消 |
+| SNAPSHOT_SAVED | 成功快照已写入缓存与设置；包括首次连接，不含示例模式 |
+| REFRESH_START | force：1 手动强制，0 普通刷新 |
+| REFRESH_END | SyncResult 序号、耗时毫秒（含等待锁）、FailureKind 序号（-1 无）、快照年龄秒（-1 无） |
+| SKIP_BACKOFF | 距允许重试的秒数 |
+| SKIP_RECENT / SKIP_FRESH / SKIP_AUTH / SKIP_ACCOUNT / SKIP_DEMO | 短时间重复／缓存未过期／需授权／无账号／示例模式 |
+| RENEW / REFRESH_CANCELLED | 发起令牌续期／正在执行的请求取消 |
+| WORK_START / WORK_END | 重试次数（从 0 开始）／SyncResult 序号 |
+| SCHEDULE / CANCEL_WORK | 目标间隔分钟／取消任务请求 |
+| WIDGET_START / WIDGET_END / WIDGET_ERROR | 更新组件请求开始／完成／异常 |
+| UI_STATE | 页面（额度0、组件1、设置2）、已初始化、已连接、同步中、有快照、错误序号、宽dp、高dp、字体比例×100、Android uiMode、显示剩余、主题（系统0、浅色1、深色2） |
+| WIDGET_STATE | 宽dp、高dp、字体比例×100、有快照、同步中、显示剩余、主题（系统0、浅色1、深色2） |
+| FOREGROUND / MANUAL_REFRESH / WIDGET_CLICK | 前台刷新入口／应用手动刷新／组件点击刷新 |
+| APP_START / UI_ERROR | 应用进程启动／界面操作或偏好读取异常 |
+
+SyncResult：SUCCESS=0、RETRY=1、AUTH_REQUIRED=2、DEFERRED=3、NO_ACCOUNT=4。FailureKind：AUTH=0、FORBIDDEN=1、LIMITED=2、NETWORK=3、SERVER=4、PROTOCOL=5、STORAGE=6。布尔值均为 0/1。后台未出现 WORK_START 时，结合报告中的网络、省电和电池优化状态检查系统调度；出现跳过事件时按原因检查缓存或退避。日志写入失败不会阻断额度刷新。
+
+### 48 小时与 7 天观察
+
+诊断报告提供最近 168 个 UTC 小时桶，按事件时间裁剪，无事件小时不生成空行。统计跨应用进程保留；清除诊断记录会一起清除统计。退出或切换账号不分段、不记录账号，因此观察期间更换连接需另行注明。系统时钟回拨时丢弃未来桶，不据此声称记录覆盖完整观察期。
+
+- usageRequests／authRequests：启动的应用 HTTP 调用次数，授权轮询也计数；跳过刷新不计请求，调用次数不等同于服务端实际收到的次数。
+- httpNon2xx：收到的非 2xx 响应次数。设备授权等待中的 403／404 可能正常，不等同于登录失败。
+- networkFailures：OkHttp 失败或响应体读取 IO 失败，包含主动取消；查看详细事件的取消标记判断。
+- snapshotsSaved／lastSavedAt／maxSuccessGapSeconds：真实成功写入次数、最后成功 Unix 秒、与前次成功之间最大的非负间隔。授权首次读取也纳入；示例模式和缓存命中不纳入。间隔只覆盖仍保留的观察数据，不等同于最大后台调度延迟。
+- 后台任务报告列出未结束周期／手动任务的状态与已重试次数，最多各 5 条；状态查询超时单独显示 unavailable，不阻断其余诊断。ENQUEUED 本身无法证明受哪个具体系统约束影响。
+
+开始自用观察时先清除诊断记录，记录开始时刻、机型／Launcher、组件个数、目标间隔以及系统电量。48 小时后先导出报告，再记录结束电量及设备电池页面显示的应用耗电；七天结束时再次导出。应用不自行推算耗电，也不将 7 天统计能力视为已完成 7 天稳定性验收。
+
+崩溃记录仅标记 Java／Kotlin 未捕获异常的大类与是否主线程，不保存消息或堆栈、不自动上传。原系统异常处理继续执行；原生崩溃、ANR、系统直接杀进程或存储不可写可能没有标记，不能以没有事件证明未发生崩溃。

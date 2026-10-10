@@ -24,6 +24,22 @@ class CodexApiTest {
         assertEquals("test-account", request.getHeader("ChatGPT-Account-Id"))
         assertEquals("/usage", request.path)
     }
+    @Test fun diagnosticsCountTransportWithoutLeakingCredentialsOrBody() = runBlocking {
+        val directory = java.nio.file.Files.createTempDirectory("quota-api-diagnostics").toFile()
+        try {
+            val diagnostics = com.tsonglew.quotapal.diagnostics.Diagnostics(java.io.File(directory, "events.log"))
+            val instrumented = CodexApi(usageUrl = server.url("/private-usage-path").toString(), diagnostics = diagnostics)
+            server.enqueue(MockResponse().setResponseCode(503).setBody("sensitive-response-body"))
+            try { instrumented.usage(Session("secret-access", "secret-refresh", "secret-account", 2000)); fail() }
+            catch (error: ApiFailure) { assertEquals(FailureKind.SERVER, error.kind) }
+            val report = diagnostics.report()
+            assertTrue(report.contains("HTTP_START 0"))
+            assertTrue(report.contains("HTTP_END 0 503"))
+            listOf("secret-access", "secret-refresh", "secret-account", "sensitive-response-body", "private-usage-path").forEach {
+                assertFalse("Diagnostics leaked $it", report.contains(it))
+            }
+        } finally { directory.deleteRecursively() }
+    }
     @Test fun rateLimitPreservesServerRetryTime() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(429).addHeader("Retry-After", "120"))
         try { api.usage(session); fail() } catch (error: ApiFailure) { assertEquals(FailureKind.LIMITED, error.kind); assertEquals(1120L, error.retryAt) }

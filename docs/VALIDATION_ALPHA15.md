@@ -1,0 +1,33 @@
+# alpha15 诊断与签名验证
+
+日期：2026-10-10（Asia/Shanghai）。版本 0.1.0-alpha15／15。基于主分支 70c4580，开发分支 codex/diagnostics-observation；本文的本地结果针对当前工作区，精确提交的 CI 结果另行记录。
+
+## 实现
+
+- 本机私有 noBackup 目录保留最近 200 条诊断事件及 168 个 UTC 小时统计桶；记录请求类别、HTTP 结果、网络失败、真实快照写入、成功间隔、刷新跳过原因、后台任务、页面／组件状态。
+- 设置提供预览、系统分享和清除。报告加入版本、网络、省电、后台任务状态；任务查询各最多等 2 秒。
+- Java／Kotlin 未捕获异常只记录大类及是否主线程，继续系统原异常处理；无异常消息、堆栈、URL、凭据、账号标识或额度数值，无自动上传。
+- 用户确定 GitHub Releases APK 渠道，创建固定 keystore 并配置 android-release。只读 API 已确认所需四项 secret 名称齐全，证书变量格式正确；未读取 secret 内容，实际匹配仍由签名执行证明。
+- 手动 Android CI 新增 check-signing，仅主分支完整 CI 成功后使用发布环境，沿用证书指纹／版本／对齐校验并上传签名验证产物，不创建或公开 Release。产物 provenance mode=signing-check，与正式发布区分。
+
+## 本地结果
+
+本机补齐并校验官方 Android 36 SDK、Build Tools 35.0.0、platform-tools；工程依赖已下载。先前缺 SDK／离线缓存的限制已解决。
+
+- `./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest`：通过，BUILD SUCCESSFUL，5 分钟；JUnit XML 共 71 项，0 failures、0 errors。
+- debug lint：0 错误、18 个 warning，完整报告在 app/build/reports/lint-results-debug.html。
+- 诊断独立 Kotlin／JUnit：10 项通过，涵盖容量轮转、跨实例保留、存储失败、7 天裁剪、时间回拨、清除、异常脱敏与系统异常处理保留。
+- 交付脚本：22 项通过，新增签名验证模式不调用 GitHub、验证模式仍拒绝指纹不符。
+- actionlint 1.7.12：通过（本机未安装 ShellCheck，使用 -shellcheck=''；CI 仍运行完整 ShellCheck）。`bash -n scripts/publish_release.sh`、`git diff --check` 通过。
+- release lint：通过，0 错误。首次 R8 构建在 300 秒命令预算内未结束，已使用更长预算继续验证，minified APK 尚未完成。
+- 本机 adb 设备列表为空。新增诊断预览／清除设备测试与现有组件测试的事件时序输出；设备执行结果待六版本 CI。
+
+## 当前 CI 基线问题
+
+只读核对确认 PR #9 已合并。主分支 [38013679974](https://github.com/tsonglew/QuotaPal/actions/runs/38013679974) 的 API 35／37.0 三组件刷新进度断言失败，统一 gate 失败，预览部署跳过。不能用此前某提交全绿覆盖此事实。
+
+当前分支保留原请求去重、实际触摸、三组件进度与成功快照断言，加入诊断时序输出，等待新 CI 实际运行定位。没有以跳过／放宽断言取得通过。G02／G03／G08 继续待验收。
+
+## 保留的真实验收
+
+E03 的系统后台约束、E07／H04／I03 的 Samsung／小米 Launcher、E08 的 48 小时观察、E09 的七天自用及真实授权／续期保持未完成。签名环境配置不是实际签名、覆盖升级或公开发布成功的证据。

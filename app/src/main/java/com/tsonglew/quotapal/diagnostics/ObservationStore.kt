@@ -1,0 +1,65 @@
+package com.tsonglew.quotapal.diagnostics
+
+import java.io.File
+import java.time.Instant
+
+/** Bounded hourly aggregates; contains no account identifiers, URLs or response payloads. */
+internal class ObservationStore(private val file: File) {
+    private data class Hour(
+        val epoch: Long, var usage: Long = 0, var auth: Long = 0,
+        var nonSuccess: Long = 0, var networkFailure: Long = 0,
+        var saved: Long = 0, var lastSavedAt: Long = 0, var maxGap: Long = 0,
+    ) {
+        fun encode() = listOf(epoch, usage, auth, nonSuccess, networkFailure, saved, lastSavedAt, maxGap).joinToString(",")
+    }
+
+    fun record(event: DiagnosticEvent, values: LongArray, now: Long) {
+        if (event !in EVENTS) return
+        val hour = Math.floorDiv(now, 3600)
+        val hours = read().filter { it.epoch in (hour - 167)..hour }.toMutableList()
+        val previousSavedAt = hours.maxOfOrNull { it.lastSavedAt } ?: 0
+        val row = hours.find { it.epoch == hour } ?: Hour(hour).also { hours.add(it) }
+        when (event) {
+            DiagnosticEvent.HTTP_START -> if (values.firstOrNull() == 0L) row.usage++ else row.auth++
+            DiagnosticEvent.HTTP_END -> if ((values.getOrNull(1) ?: 0) !in 200L..299L) row.nonSuccess++
+            DiagnosticEvent.HTTP_NETWORK_FAILURE -> row.networkFailure++
+            DiagnosticEvent.SNAPSHOT_SAVED -> {
+                row.saved++
+                if (previousSavedAt > 0 && now >= previousSavedAt) row.maxGap = maxOf(row.maxGap, now - previousSavedAt)
+                row.lastSavedAt = now
+            }
+            else -> Unit
+        }
+        file.parentFile?.mkdirs()
+        val pending = File(file.path + ".tmp")
+        pending.writeText(hours.sortedBy { it.epoch }.joinToString("\n", postfix = "\n") { it.encode() })
+        check(pending.renameTo(file)) { "Observation write failed" }
+    }
+
+    fun report(now: Long): String {
+        val hour = Math.floorDiv(now, 3600)
+        val hours = read().filter { it.epoch in (hour - 167)..hour }.sortedBy { it.epoch }
+        return "Hourly observations schema=1 (UTC, last 168 hour buckets; absent hours have no recorded events)\n" +
+            "hour usageRequests authRequests httpNon2xx networkFailures snapshotsSaved lastSavedAt maxSuccessGapSeconds\n" +
+            hours.joinToString("\n", postfix = "\n") {
+                "${Instant.ofEpochSecond(it.epoch * 3600)} ${it.usage} ${it.auth} ${it.nonSuccess} ${it.networkFailure} ${it.saved} ${it.lastSavedAt} ${it.maxGap}"
+            }
+    }
+
+    fun clear() {
+        check(!file.exists() || file.delete()) { "Observation clear failed" }
+        val pending = File(file.path + ".tmp")
+        check(!pending.exists() || pending.delete()) { "Observation temporary clear failed" }
+    }
+
+    private fun read(): List<Hour> = if (!file.exists()) emptyList() else file.readLines().takeLast(168).mapNotNull { line ->
+        val v = line.split(',').map { it.toLongOrNull() }
+        if (v.size != 8 || v.any { it == null || it < 0 }) null
+        else Hour(v[0]!!, v[1]!!, v[2]!!, v[3]!!, v[4]!!, v[5]!!, v[6]!!, v[7]!!)
+    }
+
+    companion object {
+        private val EVENTS = setOf(DiagnosticEvent.HTTP_START, DiagnosticEvent.HTTP_END,
+            DiagnosticEvent.HTTP_NETWORK_FAILURE, DiagnosticEvent.SNAPSHOT_SAVED)
+    }
+}

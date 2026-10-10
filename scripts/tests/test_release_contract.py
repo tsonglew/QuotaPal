@@ -60,6 +60,21 @@ if sys.argv[1:3]==['release','view']:
         self.assertIn('--draft=false', calls[-1])
         self.assertTrue((self.root / 'artifacts/release/provenance.json').exists())
 
+    def test_signing_check_produces_assets_without_github_mutation(self):
+        self.env['RELEASE_SIGN_ONLY'] = 'true'
+        result = self.run_release()
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual([], self.calls())
+        provenance = json.loads((self.root / 'artifacts/release/provenance.json').read_text())
+        self.assertEqual('signing-check', provenance['mode'])
+        self.assertEqual('a'*64, provenance['signing_cert_sha256'])
+
+    def test_signing_check_still_rejects_certificate_mismatch(self):
+        self.env['RELEASE_SIGN_ONLY'] = 'true'
+        self.env['ANDROID_SIGNING_CERT_SHA256'] = 'c'*64
+        self.assertNotEqual(0, self.run_release().returncode)
+        self.assertEqual([], self.calls())
+
     def test_certificate_mismatch_never_calls_github(self):
         self.env['ANDROID_SIGNING_CERT_SHA256'] = 'c'*64
         self.assertNotEqual(0, self.run_release().returncode)

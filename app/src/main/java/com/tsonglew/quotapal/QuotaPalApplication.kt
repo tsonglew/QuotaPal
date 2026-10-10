@@ -1,5 +1,7 @@
 package com.tsonglew.quotapal
 
+import com.tsonglew.quotapal.diagnostics.*
+import java.io.File
 import android.app.Application
 import android.content.Context
 import android.content.ComponentName
@@ -18,20 +20,33 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 open class QuotaPalApplication : Application() {
+    val diagnostics by lazy { Diagnostics(File(noBackupFilesDir, "diagnostics/events.log")) }
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutableWallClockRevision = MutableStateFlow(0L)
     val wallClockRevision = mutableWallClockRevision.asStateFlow()
     fun wallClockChanged() { mutableWallClockRevision.update { it + 1 } }
-    open val api by lazy { CodexApi() }
+    open val api by lazy { CodexApi(diagnostics = diagnostics) }
     val settings by lazy { SettingsStore(this) }
     val repository by lazy {
-        UsageRepository(api, CredentialVault(this), Room.databaseBuilder(this, QuotaDatabase::class.java, "quota.db").build().snapshots(), settings)
+        UsageRepository(api, CredentialVault(this), Room.databaseBuilder(this, QuotaDatabase::class.java, "quota.db").build().snapshots(), settings, diagnostics = diagnostics)
     }
     override fun onCreate() {
         super.onCreate()
-        scope.launch { repository.initialize() }
+        Thread.getDefaultUncaughtExceptionHandler()?.let { previous ->
+            Thread.setDefaultUncaughtExceptionHandler(CrashRecorder(previous, diagnostics, android.os.Looper.getMainLooper().thread))
+        }
+        scope.launch { diagnostics.record(DiagnosticEvent.APP_START); repository.initialize() }
     }
-    suspend fun updateWidgets() { QuotaWidget().updateAll(this); SlimQuotaWidget().updateAll(this) }
+    suspend fun updateWidgets() = withContext(Dispatchers.IO) {
+        diagnostics.record(DiagnosticEvent.WIDGET_START)
+        try {
+            QuotaWidget().updateAll(this@QuotaPalApplication); SlimQuotaWidget().updateAll(this@QuotaPalApplication)
+            diagnostics.record(DiagnosticEvent.WIDGET_END)
+        } catch (failure: Exception) {
+            diagnostics.record(DiagnosticEvent.WIDGET_ERROR)
+            throw failure
+        }
+    }
     suspend fun reconcileSync() {
         repository.initialize()
         val state = repository.state.value

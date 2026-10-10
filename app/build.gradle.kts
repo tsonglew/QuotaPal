@@ -13,8 +13,8 @@ android {
         applicationId = "com.tsonglew.quotapal"
         minSdk = 29
         targetSdk = 36
-        versionCode = 14
-        versionName = "0.1.0-alpha14"
+        versionCode = 15
+        versionName = "0.1.0-alpha15"
         testInstrumentationRunner = "com.tsonglew.quotapal.QuotaTestRunner"
     }
     buildTypes {

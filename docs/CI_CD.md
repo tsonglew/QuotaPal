@@ -1,6 +1,6 @@
 # CI/CD 与 GitHub Deployments
 
-2026-10-10 用户新增需求，对应 M6、checklist G01–G08。
+2026-10-10 用户新增需求，对应 M6、checklist G01–G08。首版公开渠道已由用户确定为 GitHub Releases APK。
 
 参考 [magpie 工作流](https://github.com/yetone/magpie/tree/599d784f597342e6601bdc1d49b495fdf84e546f/.github/workflows)：预览使用独立环境，构建与发布分离，发布按版本 tag 触发。QuotaPal 将这些边界用于 Android APK，不引入 macOS 公证或模型 API Key。
 
@@ -36,7 +36,9 @@
 | `ANDROID_KEY_ALIAS` | 签名 key alias |
 | `ANDROID_KEY_PASSWORD` | key 密码 |
 
-设置环境变量 `ANDROID_SIGNING_CERT_SHA256` 为预期证书的 SHA-256 指纹（可带冒号）。指纹不匹配或任一凭据缺失时发布失败。密钥由维护者离线保管和备份，不提交到 Git、不上传到 artifact，不在日志输出密码。不要为每个版本生成新密钥。
+Secrets 保存以上四项；不要把密码放到 Environment variables。macOS 下可用 `base64 -i /path/to/quotapal-release.jks | pbcopy` 复制 keystore 的 Base64 内容到剪贴板，然后粘贴到 `ANDROID_KEYSTORE_BASE64`。`ANDROID_STORE_PASSWORD` 填 keystore 密码，`ANDROID_KEY_ALIAS` 填创建时的 alias（例如 quotapal），`ANDROID_KEY_PASSWORD` 填 key 密码；默认 PKCS12 创建方式通常使用同一个密码。
+
+用 `keytool -list -v -keystore /path/to/quotapal-release.jks -alias quotapal` 查看证书（终端交互输入密码）。在 Environment variables 设置 `ANDROID_SIGNING_CERT_SHA256` 为输出 SHA256 后面的完整证书指纹（可带冒号）。指纹不匹配或任一凭据缺失时发布失败。密钥由维护者离线保管和备份，不提交到 Git、不上传到 artifact，不在日志输出密码。不要为每个版本生成新密钥。
 
 发布步骤只在所有测试通过后获取环境 secrets。编译任务不使用签名凭据，签名任务下载 unsigned release APK，以 `zipalign`、`apksigner` 完成对齐、签名和验证。临时 keystore 退出时删除。
 
@@ -87,3 +89,22 @@ Android 17 新候选启用官方 Vulkan composition（`-feature VulkanNativeSwap
 ### AVD 主版本元数据对照
 
 显式 Vulkan 候选 38005242748 的两个 Android 17 job 实际 Vulkan=1，但同一 API level: 3 分支仍关闭 HasSharedSlotsHostMemoryAllocator 与 GlDirectMem，SurfaceFlinger 转为 coherent-memory 分配崩溃。依据 [模拟器 AVD target 解析源码](https://android.googlesource.com/platform/external/qemu/+/refs/heads/emu-master-dev/android/emu/avd/src/android/avd/info.c)，新候选只将 CI 新建 AVD 根 ini 的 target 明确设为整数主版本 android-37，保留 system-images/android-37.0/google_apis 与 android-37.2/google_apis_ps16k 原路径。撤回 Vulkan composition／GuestUsesAngle 及逐项强开配置，使用默认 software 图形路径；记录修改前后根 ini、镜像路径、verbose 特性值。就绪后实际检查 guest SDK=37，16KB job 必须实际 PAGE_SIZE=16384。此为源码与日志支持的待验假设，云端结果才证明是否有效。
+
+
+## GitHub APK 渠道确认（F01）
+
+2026-10-10 用户选择 GitHub Releases 公开 APK。发布使用版本 tag、release notes、APK、SHA256SUMS 和 provenance.json；实验版本标记 prerelease。发布需仓库写权限，先建立 draft 并上传全部资产，再公开，见 [GitHub 官方发布说明](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)。预览 artifact 的 14 天保留期与正式 Release 资产分开说明。
+
+所有 APK 必须签名，后续更新需要维持签名兼容性，见 [Android 官方签名说明](https://developer.android.com/studio/publish/app-signing)。包名维持 com.tsonglew.quotapal，versionCode 递增，固定正式密钥与证书指纹校验使用现有 release job；用户仍需提供／保管正式密钥及配置 GitHub environment。正式密钥的存在、覆盖升级和真实 Release 尚无通过证据，F02／G05／G08 不因此完成。
+
+对用户提供 Android 10+ 支持范围、独立第三方身份、实验接入限制、隐私说明、安装／更新步骤和反馈入口。GitHub 版当前不做自动下载或后台安装；用户从 Releases 手动安装，Android 的安装来源权限由系统确认。切换 debug 与正式签名通常需要卸载重装并重新连接，安装前先导出需要保留的诊断报告。
+
+
+2026-10-10 最新基线核对：PR #9 已合并，主分支 70c4580 的 [运行 38013679974](https://github.com/tsonglew/QuotaPal/actions/runs/38013679974) 因 API 35／37.0 的三组件刷新进度断言失败而 gate 失败，预览被跳过。此前 38007906590 的全绿仅证明对应源提交，不代表最新主分支 gate 通过。当前分支增加诊断时序与页面回归，后续运行通过后再更新 G02／G03。android-release 环境已通过只读 API 确认存在；四项签名 secrets、证书变量和真实发布尚待验证。
+
+
+### 固定签名验证（不公开发布）
+
+在已合并的 master 上手动运行 Android CI，勾选 check-signing。此选项自动启用 release 构建、release lint／R8 及现有 minified 设备检查，完整六版本 gate 成功后才访问 android-release secrets。签名检查沿用正式签名脚本并校验证书、APK 版本和 16KB 对齐；上传 android-fixed-signature-check（14 天），provenance 标记 mode=signing-check。候选 tag 仅表示版本名称，不证明对应 Git tag 已创建；流程不会创建 tag、GitHub Release 或 deployment。
+
+此入口仅允许 master 手动触发；PR／fork／其他分支不能执行带发布凭据的步骤。有固定签名 APK 后可执行真实覆盖安装与数据迁移验收。正式公开发布仍走版本 tag 的 Release 流程，并满足稳定性验收条件。
