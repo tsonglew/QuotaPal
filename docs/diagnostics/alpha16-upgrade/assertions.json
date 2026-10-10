@@ -1,0 +1,12 @@
+{
+  "cache_restored_without_network": true,
+  "uid_preserved": true,
+  "encrypted_credential_unchanged": true,
+  "preferences_preserved": true,
+  "widget_ids_preserved": true,
+  "unique_periodic_work_preserved": true,
+  "rotation_persisted": true,
+  "quota_refreshed": true,
+  "reauthorization_not_required": true,
+  "rotated_credential_reused_after_restart": true
+}

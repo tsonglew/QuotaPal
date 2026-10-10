@@ -1,0 +1,47 @@
+{
+  "stage": "after-renewal",
+  "version": 16,
+  "uid": 10151,
+  "snapshot": {
+    "accountId": "quotapal-synthetic-upgrade-account",
+    "plan": "synthetic",
+    "windows": [
+      {
+        "id": "codex:primary_window",
+        "name": "\u6bcf\u5468\u989d\u5ea6",
+        "usedPercent": 17.0,
+        "durationSeconds": 604800,
+        "resetsAt": null
+      }
+    ],
+    "fetchedAt": 1791622068,
+    "resetCredits": null,
+    "allowed": null,
+    "limitReached": null
+  },
+  "credential_sha256": "5eb05df8ddbc335e105edb84e0c2882fb6640059ecb55e76a1df9e602217e89d",
+  "preferences_sha256": "2b335bb22ff7c506e81c655d34159609bbed53bb8d1c655a2f05a6c9e593e7e8",
+  "widget_ids": [
+    8,
+    9
+  ],
+  "periodic": [
+    {
+      "id": "dc29744d-f22c-4d87-ba5e-02e549472caa",
+      "state": 0,
+      "interval_ms": 3600000,
+      "attempts": 0
+    }
+  ],
+  "server": {
+    "challenges": 2,
+    "polls": 2,
+    "exchanges": 2,
+    "renewals": 1,
+    "usage": 4,
+    "rejected": 1,
+    "blocked": 276,
+    "used": 17,
+    "requireRenewal": true
+  }
+}
