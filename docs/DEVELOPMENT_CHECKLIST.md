@@ -84,7 +84,7 @@
 - [ ] **E08** 做 48 小时后台观察，记录请求数、实际刷新间隔、失败与耗电。
 - [ ] **E09** 连续自用至少 7 天，记录登录稳定性、小组件显示和恢复问题。
 
-2026-10-10 实时进展：[运行 38007906590](https://github.com/tsonglew/QuotaPal/actions/runs/38007906590)，源提交 f0e1fffc58452bd62545e623d08ca329c3c1b2dd，构建／单元测试／lint／产物校验、API 29／31／35／36／37.0／37.2 全部成功，统一 Android CI gate 成功。Android 17 两组各完整 18 项普通测试及四个独立探针通过，实际 guest SDK=37、PAGE_SIZE=4096／16384，E06 完成。PR 创建实际返回 403 Resource not accessible by integration，尚未创建或合并，G02／G03／G08 继续保留；此证据不代替 OEM 真机与长期观察。
+2026-10-10 实时进展：[运行 38007906590](https://github.com/tsonglew/QuotaPal/actions/runs/38007906590)，源提交 f0e1fffc58452bd62545e623d08ca329c3c1b2dd，构建／单元测试／lint／产物校验、API 29／31／35／36／37.0／37.2 全部成功，统一 Android CI gate 成功。Android 17 两组各完整 18 项普通测试及四个独立探针通过，实际 guest SDK=37、PAGE_SIZE=4096／16384，E06 完成。早期 PR 创建曾返回权限 403；现已创建 PR #10。当前主分支组件刷新测试失败，PR #10 最新完整矩阵与 deployment 仍待验证，G02／G03／G08 继续保留；此证据不代替 OEM 真机与长期观察。
 
 强制停止场景以重新打开 App 后能够恢复为验收要求，不要求强停期间继续更新。相关平台约束与来源见开发计划。
 

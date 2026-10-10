@@ -8,7 +8,7 @@
 
 | 入口 | 检查／产物 | 部署 |
 | --- | --- | --- |
-| PR、master push、手动 CI | 交付脚本测试、47 项 JVM 测试、lint、debug APK；API 29／31／35／36／37.0／37.2 设备矩阵（新增 Android 17 两项待首次 CI） | PR 或 master 全部通过后登记预览 deployment |
+| PR、master push、手动 CI | 交付脚本测试、71 项 JVM 测试、lint、debug APK；API 29／31／35／36／37.0／37.2 设备矩阵 | PR 或 master 全部通过后登记预览 deployment |
 | `v<versionName>` tag，或在该 tag 上手动运行 Release | 验证 tag 格式、版本及主分支祖先关系；复用完整 CI；额外构建和 lint minified release，并在四版本模拟器检查真实 release 页面 | 固定密钥签名、校验证书、发布 GitHub Release；记录 `android-release` 环境 |
 
 统一状态为 `Android CI gate`，只有交付工具检查、build 与全部设备矩阵成功才会通过。交付工具检查固定 actionlint 1.7.12、运行 ShellCheck 与 Python 测试。主分支 CI 不因后续 push 取消正在运行的验证；PR 新提交可取消旧验证。发布同 tag 串行执行。开发分支通过 PR 验证，避免 push 与 PR 重复启动矩阵；取消整个运行时 gate 跳过，实际构建或测试失败时 gate 仍失败。
@@ -58,7 +58,7 @@ CI debug 签名与 release 签名不同，首次切换需要卸载 debug 包再�
 
 ## 当前验证状态
 
-[GitHub CI 运行 38007906590](https://github.com/tsonglew/QuotaPal/actions/runs/38007906590)（源提交 f0e1fffc58452bd62545e623d08ca329c3c1b2dd）的构建、lint、单元测试、产物工具、六组设备矩阵及统一 gate 全部通过，覆盖 API 29／31／35／36／37.0／37.2。Android 17 两组完整普通测试各 18 项，实际页面大小 4096／16384；AVD 元数据修正获得云端验证。PR 创建仍实际返回集成权限 403，PR／主分支完整 gate、环境配置、正式发布签名、升级及 deployment 下载仍待验证，G08 继续保留。
+[GitHub CI 运行 38007906590](https://github.com/tsonglew/QuotaPal/actions/runs/38007906590)（源提交 f0e1fffc58452bd62545e623d08ca329c3c1b2dd）的构建、lint、单元测试、产物工具、六组设备矩阵及统一 gate 全部通过，覆盖 API 29／31／35／36／37.0／37.2。Android 17 两组完整普通测试各 18 项，实际页面大小 4096／16384；AVD 元数据修正获得云端验证。早期 PR 创建曾返回集成权限 403；现已通过 gh 创建 PR #10，android-release 所需 secret 名称与指纹变量格式也已确认。当前主分支三组件刷新测试存在失败，PR #10 最新完整矩阵、正式签名、升级及 deployment 下载仍待验证，G02／G03／G08 继续保留。
 
 发布控制另有 5 项命令替身测试：上传完成后才公开 draft、证书不匹配、缺失凭据、错误版本均不调用 GitHub，已公开版本不覆盖。替身测试不证明实际证书签名或 GitHub API 发布成功。
 
@@ -72,7 +72,7 @@ Android 17 使用官方 SDK 的 `37.0/google_apis` 与 `37.2/google_apis_ps16k` 
 
 ### Android 17 启动就绪
 
-运行 37986219241 的 API 37.0／37.2 在应用测试开始前分别因 input 服务缺失／Broken pipe 失败；四个既有版本设备测试通过。Android 17 改由 `scripts/android17_device_ci.sh` 启动相同官方镜像，`wait_for_android.py` 要求启动标记、核心服务、包查询、settings 与无操作按键命令连续三轮成功，再运行原有完整测试及可选 minified release 检查。启动／logcat 日志随设备证据上传；失败继续使统一 gate 失败，不跳过检查。新启动流程尚待云端验证。
+运行 37986219241 的 API 37.0／37.2 在应用测试开始前分别因 input 服务缺失／Broken pipe 失败；四个既有版本设备测试通过。Android 17 改由 `scripts/android17_device_ci.sh` 启动相同官方镜像，`wait_for_android.py` 要求启动标记、核心服务、包查询、settings 与无操作按键命令连续三轮成功，再运行原有完整测试及可选 minified release 检查。启动／logcat 日志随设备证据上传；失败继续使统一 gate 失败，不跳过检查。该启动流程已在运行 38007906590 的完整矩阵中通过，后续组件刷新失败仍需单独排查。
 
 所有普通工作流 job 检出事件的不可变 `github.sha`，避免设备 job 启动较晚时读到分支新提交；可复用工作流仍支持显式 ref。
 
@@ -95,7 +95,7 @@ Android 17 新候选启用官方 Vulkan composition（`-feature VulkanNativeSwap
 
 2026-10-10 用户选择 GitHub Releases 公开 APK。发布使用版本 tag、release notes、APK、SHA256SUMS 和 provenance.json；实验版本标记 prerelease。发布需仓库写权限，先建立 draft 并上传全部资产，再公开，见 [GitHub 官方发布说明](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)。预览 artifact 的 14 天保留期与正式 Release 资产分开说明。
 
-所有 APK 必须签名，后续更新需要维持签名兼容性，见 [Android 官方签名说明](https://developer.android.com/studio/publish/app-signing)。包名维持 com.tsonglew.quotapal，versionCode 递增，固定正式密钥与证书指纹校验使用现有 release job；用户仍需提供／保管正式密钥及配置 GitHub environment。正式密钥的存在、覆盖升级和真实 Release 尚无通过证据，F02／G05／G08 不因此完成。
+所有 APK 必须签名，后续更新需要维持签名兼容性，见 [Android 官方签名说明](https://developer.android.com/studio/publish/app-signing)。包名维持 com.tsonglew.quotapal，versionCode 递增，固定正式密钥与证书指纹校验使用现有 release job；用户已创建正式密钥并配置 GitHub environment，仍需离线保管。实际固定签名、覆盖升级和真实 Release 尚无通过证据，F02／G05／G08 不因此完成。
 
 对用户提供 Android 10+ 支持范围、独立第三方身份、实验接入限制、隐私说明、安装／更新步骤和反馈入口。GitHub 版当前不做自动下载或后台安装；用户从 Releases 手动安装，Android 的安装来源权限由系统确认。切换 debug 与正式签名通常需要卸载重装并重新连接，安装前先导出需要保留的诊断报告。
 

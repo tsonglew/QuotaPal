@@ -33,4 +33,6 @@
 E03 的系统后台约束、E07／H04／I03 的 Samsung／小米 Launcher、E08 的 48 小时观察、E09 的七天自用及真实授权／续期保持未完成。签名环境配置不是实际签名、覆盖升级或公开发布成功的证据。
 
 
-PR [#10](https://github.com/tsonglew/QuotaPal/pull/10) 已创建并关联本任务，源提交 2699a6582429801ee836bc0c410924b6e3f6fa28；[CI 38018451947](https://github.com/tsonglew/QuotaPal/actions/runs/38018451947) 正在执行。重复分支 push 运行已取消，保留完整 PR 矩阵。
+PR [#10](https://github.com/tsonglew/QuotaPal/pull/10) 已创建并关联本任务。诊断实现提交为 2699a6582429801ee836bc0c410924b6e3f6fa28；该提交 build／delivery 通过，设备矩阵随后被新提交取消，不能视为通过。重复 push 运行被取消后，旧版 always() gate 将取消显示为失败。
+
+修复提交 3e5aeb5953cd8539d9252a1c18c17fd01d883872 取消开发分支重复 push 触发，并令整个运行被取消时 gate 跳过；实际构建或测试失败仍使 gate 失败。actionlint 与 diff 检查通过。[新 CI 38018860257](https://github.com/tsonglew/QuotaPal/actions/runs/38018860257) 已启动，完整结果待核验。
