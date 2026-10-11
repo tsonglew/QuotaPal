@@ -213,9 +213,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      contents: read
+      contents: write
       actions: read
-    environment: android-release
+    environment:
+      name: android-release
+      url: ${{ github.event_name == 'push' && format('{0}/{1}/releases/tag/build-{2}-{3}', github.server_url, github.repository, github.run_id, github.run_attempt) || format('{0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -264,6 +266,11 @@ jobs:
           path: artifacts/release/
           if-no-files-found: error
           retention-days: 14
+      - name: Publish master APK to GitHub Releases
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/publish_build.py
       - name: APK download summary
         env:
           ARTIFACT_URL: ${{ steps.signed-apk.outputs.artifact-url }}
@@ -277,5 +284,5 @@ jobs:
               summary.write(f"Version: {provenance['tag'][1:]} (code {provenance['version_code']})\n\n")
               summary.write(f"Source: `{provenance['source_sha']}`\n\n")
               summary.write(f"APK SHA-256: `{provenance['sha256']}`\n\n")
-              summary.write("Artifact retained for 14 days. No GitHub Release published.\n")
+              summary.write("Artifact retained for 14 days. Master push builds are also published to GitHub Releases; manual signing checks remain artifacts only.\n")
           PY

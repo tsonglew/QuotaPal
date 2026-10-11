@@ -36,6 +36,8 @@ jobs:
           git merge-base --is-ancestor "$GITHUB_SHA" origin/master
           echo "sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
   validate:
+    permissions:
+      contents: write
     needs: prepare
     uses: ./.github/workflows/android.yml
     with:
