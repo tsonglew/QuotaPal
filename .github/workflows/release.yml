@@ -37,6 +37,7 @@ jobs:
           echo "sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
   validate:
     permissions:
+      actions: read
       contents: write
     needs: prepare
     uses: ./.github/workflows/android.yml
