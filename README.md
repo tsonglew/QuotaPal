@@ -6,9 +6,9 @@
 
 基于原生界面截图合成的展示效果图，额度均为示例数据。[查看原生截图](docs/SCREENSHOTS.md)。
 
-当前 master 版本为 `0.1.0-alpha16`。[PR #16 六组 CI](https://github.com/tsonglew/QuotaPal/actions/runs/38037325156) 已通过，覆盖 API 29／31／35／36／37.0／37.2。已提供本机诊断报告、最近 7 天的请求与刷新统计、后台任务状态，以及分品牌后台引导和小组件即时手动刷新。alpha16 修正诊断弹窗的主线程约束，固定签名覆盖升级已通过，验证记录见 [alpha16](docs/VALIDATION_ALPHA16.md)。真实账号续期、OEM 后台恢复和长期自用仍待验收。
+当前开发版本为 `0.1.0-alpha17`，新增诊断报告的系统后台受限标记，帮助排查后台刷新延迟。既有 alpha16 的 [PR #16 六组 CI](https://github.com/tsonglew/QuotaPal/actions/runs/38037325156) 已通过，覆盖 API 29／31／35／36／37.0／37.2。已提供本机诊断报告、最近 7 天的请求与刷新统计、后台任务状态，以及分品牌后台引导和小组件即时手动刷新。alpha16 修正诊断弹窗的主线程约束，固定签名覆盖升级已通过，验证记录见 [alpha16](docs/VALIDATION_ALPHA16.md)。真实账号续期、OEM 后台恢复和长期自用仍待验收。
 
-合并到 master 后自动运行完整 CI、构建并生成固定签名 APK。[当前 alpha16 签名包](https://github.com/tsonglew/QuotaPal/actions/runs/38037985183/artifacts/11664782203) 已生成。后续检查全部通过后，在对应 Actions 运行的 **Artifacts → android-signed-apk** 下载；包内附校验和与来源信息，保留 14 天。公开发布渠道为 GitHub Releases APK，正式发布按版本 tag 执行。
+合并到 master 后自动运行完整 CI、构建并生成固定签名 APK。[已核验 alpha16 签名包](https://github.com/tsonglew/QuotaPal/actions/runs/38043761608/artifacts/11667626551) 已生成。后续检查全部通过后，在对应 Actions 运行的 **Artifacts → android-signed-apk** 下载；包内附校验和与来源信息，保留 14 天。公开发布渠道为 GitHub Releases APK，正式发布按版本 tag 执行。
 
 - [开发计划](docs/DEVELOPMENT_PLAN.md)
 - [开发与验收 checklist](docs/DEVELOPMENT_CHECKLIST.md)

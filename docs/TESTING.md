@@ -103,4 +103,67 @@ master f5edf96 的 [38034462993](https://github.com/tsonglew/QuotaPal/actions/ru
 
 普通套件默认跳过；CI API 29 在原省电恢复探针后单独执行并保存 `scheduled-retry-probe.txt`，仍需明确 OK (1 test) 与 instrumentation 成功状态。宿主执行有超时；结束强停测试应用，失败时清除可能残留的合成凭据。此项证明真实调度的有限重试，不代替保持网络时的 Doze／省电限制观察及长期验收。
 
-2026-10-10 本地 API 31 实际通过（112.842 秒）：两段请求间隔为 30,237／60,127 ms，第三次进入 FAILED，新用户请求成功。证据：[runner 原文](diagnostics/scheduled-retry-probe-api31.txt)、[实际时长](diagnostics/scheduled-retry-timing-api31.txt)。云端 API 29 新增探针仍须独立运行，E03 保持未完成。
+2026-10-10 本地 API 31 实际通过（112.842 秒）：两段请求间隔为 30,237／60,127 ms，第三次进入 FAILED，新用户请求成功。证据：[runner 原文](diagnostics/scheduled-retry-probe-api31.txt)、[实际时长](diagnostics/scheduled-retry-timing-api31.txt)。PR #18 的 [完整 CI](https://github.com/tsonglew/QuotaPal/actions/runs/38042885098) 已通过六组设备与 gate，API 29 独立探针 112.766 秒成功，实际退避为 30,098／60,098 ms（[runner](diagnostics/scheduled-retry-probe-api29.txt)、[时长](diagnostics/scheduled-retry-timing-api29.txt)）。E03 的省电场景仍待完成。
+
+## 保持联网的外部后台观察
+
+进程内 instrumentation 会保留 WorkManager 的 GreedyScheduler；本地 API 31 实验中，即使 JobScheduler 显示 `readyNotDozing=false`，活着的测试进程仍执行了到期任务。因此该方式不能证明应用退出后的系统调度延迟，不能只检查 JobScheduler 字段便宣称通过。
+
+`scripts/upgrade_lab_server.py` 支持 `--direct-tls-port 9444`，与原 `--port 9443` 的控制接口共享合成账号和请求计数。直接 TLS 只接受 `auth.openai.com`／`chatgpt.com` 的固定协议路径，拒绝未知 Host 和 `/lab/*` 控制路径；所有模式均不转发外部请求。该入口用于自建、可 root 的一次性模拟器，不修改正式 APK 的证书校验或业务代码。
+
+实验准备流程：
+
+1. 确认目标 serial、AVD 名称和 `ro.kernel.qemu=1`，保存原 hosts、deep Doze、屏幕、电池、省电与 app-op 状态。使用新建实验目录生成临时 CA；保留原始 hosts 备份，不能用上次实验的映射覆盖它。
+2. 仅在该模拟器安装临时系统 CA，将两个协议域名映射到 loopback，重启使信任与 DNS 生效。通过指定 serial 的 `adb reverse tcp:443 tcp:9444` 接入本机服务；保持全局 HTTP 代理关闭，核对当前默认网络实际具有 VALIDATED。
+3. 安装已核验哈希／固定签名的正式 APK，用合成账号连接，通过界面选择 15 分钟周期并添加实际桌面组件。等首次周期完成后，回到桌面并使用 `am kill` 回收后台进程，确认 PID 消失；不能用会暂停后台任务的 force-stop 代替。
+4. 外部记录服务请求计数、只读数据库副本、唯一 WorkSpec 的周期／入队时间／尝试次数、JobScheduler 约束和网络状态。限制期间实际等待完整周期，不能修改时钟、数据库或强制执行 job。解除限制后等待系统自行启动刷新，核对原任务、成功缓存时间和组件恢复。
+5. 结束时恢复系统限制、原 hosts，移除临时 CA 与 adb reverse，并清除模拟器中的合成账号。对 writable-system 镜像重启复核恢复结果，再关闭模拟器，避免旧映射在下次启动重新出现。
+
+2026-10-10：直接 TLS 下正式 alpha16 已完成实际连接和额度读取，默认网络保持 VALIDATED；协议测试覆盖认证／401 续期／读取、共享计数、未知域名及控制路由拒绝、CA 信任。随后外部 Doze 观察实际通过，详见下方证据；系统省电与后台受限仍待独立验收，E03 保持未完成。
+
+`scripts/background_power_probe.py` 将上述观察整理为外部脚本，当前解析器限 API 31。准备好专用模拟器和合成账号后，每次选择 `doze`、`saver` 或 `restricted` 中一个模式，提供明确的 adb 路径、serial、AVD 名称与新输出目录。例如：
+
+```sh
+python3 scripts/background_power_probe.py \
+  --adb .tools/android-sdk/platform-tools/adb \
+  --serial emulator-5556 --avd quotapal-release-upgrade-31 \
+  --mode restricted --output /tmp/quotapal-background-restricted
+```
+
+脚本拒绝已有 Doze／省电／后台限制、非 loopback 的协议域名、缺少 TLS reverse、真实账号缓存或非 15 分钟唯一周期；每个模式实际等待 16 分钟，保留网络，每 30 秒检查请求上限。Doze／后台受限要求零请求及缓存时间不变，系统省电允许正常周期请求但禁止请求激增；解除限制后要求自动得到更新的成功缓存并保留任务和组件。输出只保存所需数据库元数据，临时数据库副本自动删除。系统限制在 finally 恢复，APK／临时 CA／hosts 等实验环境仍须按上述流程单独清理。
+
+该脚本已通过五项网络／hosts／组件解析及恢复失败回归，全部 35 项脚本测试成功；实际并发实验拒绝检查及运行中模拟器的只读快照核对通过。基线与最终 crash buffer、退出原因和最近 ANR 原文单独保存，需要核对是否出现 QuotaPal 新增异常，不能把请求／缓存断言成功当作无崩溃证明。三个模式的完整运行尚未验收，不能据此勾选 E03。
+
+### API 31 外部 Doze 实测
+
+正式 alpha16（源 `6ac605a`，完整 APK 哈希和证书见 [汇总](diagnostics/power-api31/doze/summary.json)）在专用模拟器、合成账号、直接 TLS 下完成约 977 秒观察。后台进程通过 `am kill` 回收，保持有效默认网络；任务周期 900,000 ms、首次周期已结束，到期后 JobScheduler 仍显示 `readyNotDozing=false`，新增请求为零，成功缓存时间保持不变。JobScheduler 的 earliest 已过去约 2 分 15 秒；底层 Wi-Fi 仍 VALIDATED，但该应用 UID 的网络被标记 REASON_DOZE，符合系统空闲限制，不能将这里的 CONNECTIVITY 未满足误读为实验主动断网。解除 Doze 后未打开 App 或强制调度，原 WorkSpec 自行运行一次，period_count 从 1 增至 2，请求数 1→2，缓存 fetchedAt 从 1791627337 更新为 1791628489。
+
+[观察原文](diagnostics/power-api31/doze/observer.txt)、[到期快照](diagnostics/power-api31/doze/doze-due.json)、[约束](diagnostics/power-api31/doze/doze-due-constraints.txt)、[恢复快照](diagnostics/power-api31/doze/recovered.json) 均保留。恢复后桌面仍为剩余 62%，[实际截图](diagnostics/power-api31/doze/recovered-widget.png) 的更新时间为 18:34；crash buffer 为空，系统 lastanr 显示本次启动无 ANR，退出记录为实验的 kill background。此项仅证明该正式包、API 31、单次真实周期的 Doze 延迟与恢复，不替代其余省电模式、真实账号、OEM 或长期观察。
+
+## alpha17 后台受限诊断
+
+报告新增 `backgroundRestricted`，读取 Android ActivityManager 的实际限制标记。独立 API 31 模拟器通过真实 app-op 切换允许→受限→允许，预览报告分别出现 false→true→false，额度请求数不变；[原始回归](diagnostics/alpha17-background-restriction-report-api31.txt) 为 14.644 秒成功。测试结束恢复原 app-op，未触碰同机另一个正式 alpha16 后台观察设备。该字段表示系统后台限制状态，不声称可读取小米自启动、任务锁定或其他 OEM 私有开关。
+
+alpha17 本地验证：71 项 JVM 测试、lint 和构建通过；完整 AppFlow 五项通过（24.266 秒），见 [runner 原文](diagnostics/alpha17-appflow-api31.txt)，覆盖诊断反复预览／清除、真实后台限制切换、隐私、主题与后台引导。跨版本仍以对应提交的云端 CI 为准。
+
+### 后台限制恢复命令修正
+
+首轮外部后台受限观察满 16 分钟后，恢复脚本把 app-op 写为显式 `default`；API 31 的 JobScheduler 仍显示 `readyNotRestrictedInBg=false`，四分钟内无请求，探针正确失败。随后只将同一 app-op 改为 `allow`，未打开 App 或强制执行任务，原任务立即自行刷新一次。原失败、修正动作与快照保留在 [失败证据](diagnostics/power-api31/restricted-default-failure/summary.json) 和 [恢复日志](diagnostics/power-api31/restricted-default-failure/corrective-allow.txt)，不把人工修正后的结果改写成原探针成功。
+
+[AOSP 官方测试说明](https://source.android.com/docs/core/power/app_mgmt#test-app-restrictions) 使用 `allow` 恢复默认允许行为。外部探针、原 `power_smoke.sh` 和诊断设备测试统一修正，拒绝把已有显式 default 当成未受限状态；恢复后检查实际状态。诊断回归增加最终 `isBackgroundRestricted=false` 断言，独立 API 31 实测 3.776 秒通过（[原文](diagnostics/alpha17-background-restoration-api31.txt)）。早期省电探针的缓存／组件结果不作为后台权限已经恢复的证明。
+
+首次修正重跑在施加限制前因应用仍处于近期服务清理阶段而退出；保留 [前置失败](diagnostics/power-api31/restricted-default-failure/retry-process-still-alive.txt)。脚本改为最多等待 60 秒、重复普通 `am kill` 并确认 PID 消失，仍不使用 force-stop；设置完成前任务已到期则拒绝运行。新的完整周期正在观察，E03 仍待验收。
+
+### API 31 外部后台受限实测
+
+修正后的完整重跑通过（[汇总](diagnostics/power-api31/restricted/summary.json)、[原文](diagnostics/power-api31/restricted/observer.txt)）：约 974 秒限制期间零新增请求，默认网络持续 VALIDATED，成功缓存时间及组件 ID 不变。恢复 allow 后，原周期任务自动请求一次，period_count 从 3 增至 4，fetchedAt 从 1791629798 更新为 1791630946；组件显示更新于 19:15，crash buffer 为空、系统无 ANR。未打开 App 或强制执行 job。
+
+[组件截图](diagnostics/power-api31/restricted/recovered-widget.png) 采集时下一轮省电观察已经开始，因此只作为恢复后组件时间的证据，系统限制状态以各阶段快照／JobScheduler 记录为准。首轮 default 恢复失败及第一次重跑的进程前置失败继续保留，不替换成成功结果。当时系统省电完整周期仍在运行；最终结论见下一节。
+
+### API 31 外部系统省电实测与 E03 结论
+
+系统省电完整周期通过（[汇总](diagnostics/power-api31/saver/summary.json)、[观察原文](diagnostics/power-api31/saver/observer.txt)）。系统确实显示 Battery Saver ON，默认网络保持 VALIDATED；约 973 秒期间零新增请求、成功缓存不变。关闭省电后，原周期任务自动请求一次，period_count 从 4 增至 5，fetchedAt 从 1791630946 更新为 1791631985；[组件截图](diagnostics/power-api31/saver/recovered-widget.png) 显示更新于 19:33，crash buffer 为空、系统无 ANR，限制均恢复。
+
+Doze、后台受限、系统省电三种真实状态的单周期观察均通过，配合 API 29／31 的真实 503 指数退避、第三次终止及新请求恢复验证，E03 完成。实际正式包来源均为 alpha16／6ac605a；alpha17 仅新增诊断字段与测试，未修改这些后台生产路径。此结论不扩展为 OEM、真实账号或长期稳定性通过。
+
+[清理记录](diagnostics/power-api31/cleanup.txt) 确认合成账号和 APK 已删除、hosts 恢复、临时 CA 和 adb reverse 移除、全局代理关闭；模拟器实际重启后再次核验，实验服务停止、临时私钥删除。用户的 APK 签名 keystore 未读取或修改。

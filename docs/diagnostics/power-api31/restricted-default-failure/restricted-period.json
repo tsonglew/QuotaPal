@@ -1,0 +1,29 @@
+{
+  "time": 1791629521.080352,
+  "server": {
+    "challenges": 1,
+    "polls": 1,
+    "exchanges": 1,
+    "renewals": 0,
+    "usage": 2,
+    "rejected": 0,
+    "blocked": 0,
+    "used": 38,
+    "requireRenewal": false
+  },
+  "work": [
+    {
+      "id": "8ef801ab-378d-4a9e-82aa-70ab802ebcbd",
+      "state": 0,
+      "interval_duration": 900000,
+      "last_enqueue_time": 1791628489502,
+      "period_count": 2,
+      "run_attempt_count": 0
+    }
+  ],
+  "fetched_at": 1791628489,
+  "validated": true,
+  "widgets": [
+    2
+  ]
+}

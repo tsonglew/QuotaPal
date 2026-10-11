@@ -1,0 +1,28 @@
+{
+  "time": 1791627505.7395241,
+  "state": {
+    "challenges": 1,
+    "polls": 1,
+    "exchanges": 1,
+    "renewals": 0,
+    "usage": 1,
+    "rejected": 0,
+    "blocked": 0,
+    "used": 38,
+    "requireRenewal": false
+  },
+  "work": [
+    {
+      "id": "8ef801ab-378d-4a9e-82aa-70ab802ebcbd",
+      "state": 0,
+      "interval_duration": 900000,
+      "last_enqueue_time": 1791627447196,
+      "period_count": 1,
+      "run_attempt_count": 0
+    }
+  ],
+  "validated": true,
+  "idle": "ACTIVE",
+  "fetched_at": 1791627337,
+  "default_network_validated": true
+}

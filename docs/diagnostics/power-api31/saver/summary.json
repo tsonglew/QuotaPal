@@ -1,0 +1,12 @@
+{
+  "observer_exit_code": 0,
+  "script_source": "8e4777e846769ee8ca8adcc73a3b73edf2b24a25",
+  "apk_source": "6ac605a8cb15c3745684bd5763668018e517f858",
+  "apk_version": "0.1.0-alpha16",
+  "restriction_observed_seconds": 973.2,
+  "restricted_requests": 0,
+  "recovery_requests": 1,
+  "widget_time": "10/10 19:33",
+  "result": "PASS",
+  "limits": "One API 31 synthetic-account cycle; OEM, real accounts and long-term observations remain separate."
+}

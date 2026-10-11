@@ -413,11 +413,13 @@ private fun DiagnosticEntry() {
                 runCatching {
                     val app = context.quotaApp
                     val power = context.getSystemService(android.os.PowerManager::class.java)
+                    val activity = context.getSystemService(android.app.ActivityManager::class.java)
                     val network = context.getSystemService(android.net.ConnectivityManager::class.java)
                     val caps = network.getNetworkCapabilities(network.activeNetwork)
                     "QuotaPal ${com.tsonglew.quotapal.BuildConfig.VERSION_NAME} diagnostic schema=1\n" +
                         "Android SDK=${android.os.Build.VERSION.SDK_INT}\n" +
                         "powerSave=${power.isPowerSaveMode} idle=${power.isDeviceIdleMode} batteryExempt=${power.isIgnoringBatteryOptimizations(context.packageName)}\n" +
+                        "backgroundRestricted=${activity.isBackgroundRestricted}\n" +
                         "networkValidated=${caps?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED)}\n" +
                         com.tsonglew.quotapal.sync.SyncScheduler.diagnosticReport(context) +
                         app.diagnostics.report()

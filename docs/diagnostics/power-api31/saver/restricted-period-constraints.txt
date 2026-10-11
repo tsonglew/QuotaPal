@@ -1,0 +1,76 @@
+  JOB #u0a146/2: a6a4fdc com.tsonglew.quotapal/androidx.work.impl.background.systemjob.SystemJobService
+    Required constraints: CHARGING TIMING_DELAY [0x80000001]
+    Satisfied constraints: BATTERY_NOT_LOW DEVICE_NOT_DOZING WITHIN_QUOTA [0x3000002]
+    Unsatisfied constraints: CHARGING TIMING_DELAY [0x80000001]
+      readyNotDozing: true
+      readyNotRestrictedInBg: false
+    Run time: earliest=+3649d22h44m25s904ms, latest=none, original latest=none
+    Ready: false (job=false user=true !restricted=true !pending=true !active=true !backingup=true comp=true)
+  JOB #u0a146/10: b475bf5 com.tsonglew.quotapal/androidx.work.impl.background.systemjob.SystemJobService
+    Required constraints: TIMING_DELAY CONNECTIVITY [0x90000000]
+    Satisfied constraints: DEVICE_NOT_DOZING WITHIN_QUOTA [0x3000000]
+    Unsatisfied constraints: TIMING_DELAY CONNECTIVITY [0x90000000]
+      readyNotDozing: true
+      readyNotRestrictedInBg: false
+    Run time: earliest=-2m14s870ms, latest=none, original latest=none
+    Ready: false (job=false user=true !restricted=true !pending=true !active=true !backingup=true comp=true)
+      Required constraints:
+      Satisfied constraints: DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x3400000]
+      Unsatisfied constraints:
+        readyNotDozing: true
+        readyNotRestrictedInBg: true
+      Run time: earliest=none, latest=none, original latest=none
+      Required constraints: CONNECTIVITY [0x10000000]
+      Satisfied constraints: CONNECTIVITY DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x13400000]
+      Unsatisfied constraints:
+        readyNotDozing: true
+        readyNotRestrictedInBg: true
+      Run time: earliest=none, latest=none, original latest=none
+      Required constraints: TIMING_DELAY CONNECTIVITY [0x90000000]
+      Satisfied constraints: TIMING_DELAY CONNECTIVITY DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x93400000]
+      Unsatisfied constraints:
+        readyNotDozing: true
+        readyNotRestrictedInBg: true
+      Run time: earliest=-21m22s772ms, latest=none, original latest=none
+      Required constraints:
+      Satisfied constraints: DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x3400000]
+      Unsatisfied constraints:
+        readyNotDozing: true
+        readyNotRestrictedInBg: true
+      Run time: earliest=none, latest=none, original latest=none
+      Required constraints: CONNECTIVITY [0x10000000]
+      Satisfied constraints: CONNECTIVITY DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x13400000]
+      Unsatisfied constraints:
+        readyNotDozing: true
+        readyNotRestrictedInBg: true
+      Run time: earliest=none, latest=none, original latest=none
+      Required constraints: CONNECTIVITY [0x10000000]
+      Satisfied constraints: CONNECTIVITY DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x13400000]
+      Unsatisfied constraints:
+        readyNotDozing: true
+        readyNotRestrictedInBg: true
+      Run time: earliest=none, latest=none, original latest=none
+      Required constraints: TIMING_DELAY CONNECTIVITY [0x90000000]
+      Satisfied constraints: TIMING_DELAY CONNECTIVITY DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x93400000]
+      Unsatisfied constraints:
+        readyNotDozing: true
+        readyNotRestrictedInBg: true
+      Run time: earliest=-43m11s523ms, latest=none, original latest=none
+      Required constraints:
+      Satisfied constraints: DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x3400000]
+      Unsatisfied constraints:
+        readyNotDozing: true
+        readyNotRestrictedInBg: true
+      Run time: earliest=none, latest=none, original latest=none
+      Required constraints: CONNECTIVITY [0x10000000]
+      Satisfied constraints: CONNECTIVITY DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x13400000]
+      Unsatisfied constraints:
+        readyNotDozing: true
+        readyNotRestrictedInBg: true
+      Run time: earliest=none, latest=none, original latest=none
+      Required constraints: TIMING_DELAY CONNECTIVITY [0x90000000]
+      Satisfied constraints: TIMING_DELAY CONNECTIVITY DEVICE_NOT_DOZING BACKGROUND_NOT_RESTRICTED WITHIN_QUOTA [0x93400000]
+      Unsatisfied constraints:
+        readyNotDozing: true
+        readyNotRestrictedInBg: true
+      Run time: earliest=-1h0m33s829ms, latest=none, original latest=none

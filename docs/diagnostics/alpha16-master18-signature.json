@@ -1,0 +1,9 @@
+{
+  "stage": "verified",
+  "run": "38043761608",
+  "source_sha": "e4ed832342b5c8ab617d8b3feb8edb18863ff989",
+  "apk": "QuotaPal-0.1.0-alpha16.apk",
+  "sha256": "44ea9ebcfaa62c841974b16428e19b9702dc912468f635952695a1e0a341281d",
+  "signing_cert_sha256": "5e7980c122100ccf9799a5174cb0e5a1748b8c442c09c015e145003145d2b5d4",
+  "version_code": 16
+}

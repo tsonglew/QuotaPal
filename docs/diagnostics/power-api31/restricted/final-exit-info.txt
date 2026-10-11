@@ -1,0 +1,72 @@
+ACTIVITY MANAGER PROCESS EXIT INFO (dumpsys activity exit-info)
+Last Timestamp of Persistence Into Persistent Storage: 2026-10-10 19:11:12.941
+  package: com.tsonglew.quotapal
+    Historical Process Exit for uid=10146
+        ApplicationExitInfo #0:
+          timestamp=2026-10-10 18:59:27.031
+          pid=5870
+          realUid=10146
+          packageUid=10146
+          definingUid=10146
+          user=0
+          process=com.tsonglew.quotapal
+          reason=10 (USER REQUESTED)
+          subreason=0 (UNKNOWN)
+          status=0
+          importance=400
+          pss=17MB
+          rss=119MB
+          description=kill background
+          state=empty
+          trace=null
+        ApplicationExitInfo #1:
+          timestamp=2026-10-10 18:35:40.388
+          pid=5147
+          realUid=10146
+          packageUid=10146
+          definingUid=10146
+          user=0
+          process=com.tsonglew.quotapal
+          reason=10 (USER REQUESTED)
+          subreason=0 (UNKNOWN)
+          status=0
+          importance=400
+          pss=17MB
+          rss=120MB
+          description=kill background
+          state=empty
+          trace=null
+        ApplicationExitInfo #2:
+          timestamp=2026-10-10 18:18:21.544
+          pid=4158
+          realUid=10146
+          packageUid=10146
+          definingUid=10146
+          user=0
+          process=com.tsonglew.quotapal
+          reason=10 (USER REQUESTED)
+          subreason=0 (UNKNOWN)
+          status=0
+          importance=400
+          pss=43MB
+          rss=161MB
+          description=kill background
+          state=empty
+          trace=null
+        ApplicationExitInfo #3:
+          timestamp=2026-10-10 18:00:46.835
+          pid=4727
+          realUid=10146
+          packageUid=10146
+          definingUid=10146
+          user=0
+          process=com.tsonglew.quotapal
+          reason=10 (USER REQUESTED)
+          subreason=0 (UNKNOWN)
+          status=0
+          importance=125
+          pss=89MB
+          rss=248MB
+          description=stop com.tsonglew.quotapal due to finished inst
+          state=empty
+          trace=null

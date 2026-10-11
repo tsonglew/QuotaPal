@@ -1,8 +1,10 @@
-"""Loopback-only synthetic HTTPS proxy for production APK upgrade verification.
+"""Loopback-only synthetic HTTPS service for production APK verification.
 
 Never forwards traffic. Only the two adapter hosts and fixed fixture routes work.
 Use a task-owned emulator with direct service DNS blocked and a temporary system
-test CA. No production APK, trust policy, signing key or real account is modified.
+test CA. Optional direct TLS supports adb reverse without changing the emulator's
+global proxy, preserving OS network validation during background observations.
+No production APK, trust policy, signing key or real account is modified.
 """
 import argparse
 import base64
@@ -102,8 +104,8 @@ class Fixture:
             return 403, {'error': 'fixture route blocked'}
 
 
-def make_server(directory, port=9443):
-    fixture = Fixture()
+def make_server(directory, port=9443, *, fixture=None, direct_tls=False):
+    fixture = fixture if fixture is not None else Fixture()
     tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     tls.load_cert_chain(str(Path(directory) / 'server.pem'), str(Path(directory) / 'server.key'))
 
@@ -133,6 +135,9 @@ def make_server(directory, port=9443):
             self.close_connection = True
 
         def do_CONNECT(self):
+            if direct_tls:
+                self.respond(403, {'error': 'nested tunnel disabled'})
+                return
             if self.path not in ('auth.openai.com:443', 'chatgpt.com:443'):
                 with fixture.lock:
                     fixture.counts['blocked'] += 1
@@ -154,6 +159,14 @@ def make_server(directory, port=9443):
 
         def handle_fixture(self):
             try:
+                if direct_tls:
+                    authority = self.headers.get('Host', '')
+                    if authority not in ('auth.openai.com', 'auth.openai.com:443', 'chatgpt.com', 'chatgpt.com:443'):
+                        with fixture.lock:
+                            fixture.counts['blocked'] += 1
+                        self.respond(403, {'error': 'fixture authority blocked'})
+                        return
+                    self.tunnel_host = authority.split(':')[0]
                 length = int(self.headers.get('Content-Length', '0'))
                 if length < 0 or length > 16384:
                     self.respond(413, {'error': 'fixture body too large'})
@@ -171,6 +184,8 @@ def make_server(directory, port=9443):
 
     server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
     server.daemon_threads = True
+    if direct_tls:
+        server.socket = tls.wrap_socket(server.socket, server_side=True)
     return server, fixture
 
 
@@ -179,9 +194,21 @@ if __name__ == '__main__':
     parser.add_argument('--directory', required=True)
     parser.add_argument('--port', type=int, default=9443)
     parser.add_argument('--create-certificates', action='store_true')
+    parser.add_argument('--direct-tls-port', type=int, help='Optional loopback TLS listener for owned-emulator adb reverse; shares fixture state')
     args = parser.parse_args()
     if args.create_certificates:
         certificates(args.directory)
-    server, _ = make_server(args.directory, args.port)
+    server, fixture = make_server(args.directory, args.port)
+    direct = None
+    if args.direct_tls_port is not None:
+        direct, _ = make_server(args.directory, args.direct_tls_port, fixture=fixture, direct_tls=True)
+        threading.Thread(target=direct.serve_forever, daemon=True).start()
+        print(f'Synthetic direct TLS listening on 127.0.0.1:{direct.server_port}', flush=True)
     print(f'Synthetic upgrade fixture listening on 127.0.0.1:{server.server_port}; no external forwarding', flush=True)
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    finally:
+        server.server_close()
+        if direct is not None:
+            direct.shutdown()
+            direct.server_close()
