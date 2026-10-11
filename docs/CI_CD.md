@@ -11,7 +11,7 @@
 | PR、master push、手动 CI | 交付脚本测试、71 项 JVM 测试、lint、debug APK；API 29／31／35／36／37.0／37.2 设备矩阵 | PR 或 master 全部通过后登记预览 deployment |
 | `v<versionName>` tag，或在该 tag 上手动运行 Release | 验证 tag 格式、版本及主分支祖先关系；复用完整 CI；额外构建和 lint minified release，并在六组模拟器检查真实 release 页面 | 固定密钥签名、校验证书、发布 GitHub Release；记录 `android-release` 环境 |
 
-合并到 master 自动执行完整 CI、release lint／R8 和六组 minified 页面检查；全部通过后使用 android-release 固定密钥签名，上传 `android-signed-apk`（保留 14 天）。运行摘要提供下载链接、版本、源提交和 APK 哈希；产物包含 APK、SHA256SUMS、provenance.json。构建或设备测试失败时不会签名。PR 不接触发布 secrets，正式公开 Release 仍由版本 tag 驱动；同版本 master 产物可用于测试，正式覆盖升级仍需递增 versionCode。
+合并到 master 自动执行完整 CI、release lint／R8 和六组 minified 页面检查；全部通过后使用 android-release 固定密钥签名，上传 `android-signed-apk`（保留 14 天）。运行摘要提供下载链接、版本、源提交和 APK 哈希；产物包含 APK、SHA256SUMS、provenance.json。构建或设备测试失败时不会签名。PR 不接触发布 secrets，master push 随后自动创建独立 `build-<runId>-<attempt>` 预发布并上传相同 APK／校验和／来源信息，历史包不覆盖；同版本 master 产物可用于测试，正式覆盖升级仍需递增 versionCode。
 
 统一状态为 `Android CI gate`，只有交付工具检查、build 与全部设备矩阵成功才会通过。交付工具检查固定 actionlint 1.7.12、运行 ShellCheck 与 Python 测试。主分支 CI 不因后续 push 取消正在运行的验证；PR 新提交可取消旧验证。发布同 tag 串行执行。开发分支通过 PR 验证，避免 push 与 PR 重复启动矩阵；取消整个运行时 gate 跳过，实际构建或测试失败时 gate 仍失败。
 
@@ -115,4 +115,8 @@ Android 17 新候选启用官方 Vulkan composition（`-feature VulkanNativeSwap
 
 在已合并的 master 上手动运行 Android CI，勾选 check-signing。此选项自动启用 release 构建、release lint／R8 及现有 minified 设备检查，完整六版本 gate 成功后才访问 android-release secrets。签名检查沿用正式签名脚本并校验证书、APK 版本和 16KB 对齐；上传 android-fixed-signature-check（14 天），provenance 标记 mode=signing-check。候选 tag 仅表示版本名称，不证明对应 Git tag 已创建；流程不会创建 tag 或 GitHub Release。使用 android-release environment 的 job 会由 GitHub 生成环境部署记录；该成功记录表示签名验证通过，不代表公开 Release。
 
-手动 check-signing 仅允许 master；master push 会自动执行同一固定签名验证并上传 android-signed-apk。PR／fork／其他分支不能执行带发布凭据的步骤。有固定签名 APK 后可执行真实覆盖安装与数据迁移验收。正式公开发布仍走版本 tag 的 Release 流程，并满足稳定性验收条件。
+手动 check-signing 仅允许 master；master push 会自动执行同一固定签名验证并上传 android-signed-apk。PR／fork／其他分支不能执行带发布凭据的步骤。有固定签名 APK 后可执行真实覆盖安装与数据迁移验收。master push 同时发布构建预发布；稳定版本仍走版本 tag 流程，并满足稳定性验收条件。
+
+### 每次 master 出包自动上传 Releases
+
+2026-10-11 用户授权每次打包上传 GitHub Releases。master push 的完整 CI 与固定签名验证通过后，先保留 Actions artifact，再创建指向本次准确源提交的 `build-<runId>-<attempt>` tag，建立 draft、上传三个资产，全部成功后公开为 prerelease。每次重跑使用新的 attempt；不覆盖旧 tag 或已公开资产。上传失败留下草稿供排查，重新运行失败 job 会产生新的构建条目。PR debug 包及手动 check-signing 仍不公开；稳定版本可继续通过 `v<versionName>` 发布。
